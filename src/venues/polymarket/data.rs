@@ -1,5 +1,8 @@
 use super::consts::DATA_API;
-use crate::venues::polymarket::types::{TradesQuery, TradesResponse};
+use crate::venues::polymarket::types::{
+    ActivityQuery, ActivityResponse, PositionsQuery, PositionsResponse, TopHoldersResponse,
+    TradesQuery, TradesResponse, ValueResponse,
+};
 
 struct DataApi {
     client: reqwest::Client,
@@ -40,6 +43,120 @@ impl DataApi {
             .client
             .get(format!("{DATA_API}/v2/trades"))
             .query(&params);
+
+        let res = req.send().await?.error_for_status()?;
+
+        Ok(serde_json::from_str(res.text().await?.as_str())?)
+    }
+
+    async fn get_positions(
+        &self,
+        query: PositionsQuery<'_>,
+    ) -> Result<PositionsResponse, Box<dyn std::error::Error>> {
+        let mut params: Vec<(&str, String)> = vec![
+            ("user", query.user.to_string()),
+            ("limit", query.limit.to_string()),
+            ("offset", query.offset.to_string()),
+        ];
+
+        if let Some(m) = query.market {
+            params.push(("market", m.to_string()));
+        }
+        if let Some(s) = query.sort_by {
+            params.push(("sortBy", s.to_string()));
+        }
+        if let Some(s) = query.sort_direction {
+            params.push(("sortDirection", s.to_string()));
+        }
+        if let Some(r) = query.redeemable {
+            params.push(("redeemable", r.to_string()));
+        }
+        if let Some(m) = query.mergeable {
+            params.push(("mergeable", m.to_string()));
+        }
+
+        let req = self
+            .client
+            .get(format!("{DATA_API}/positions"))
+            .query(&params);
+
+        let res = req.send().await?.error_for_status()?;
+
+        Ok(serde_json::from_str(res.text().await?.as_str())?)
+    }
+
+    async fn get_activity(
+        &self,
+        query: ActivityQuery<'_>,
+    ) -> Result<ActivityResponse, Box<dyn std::error::Error>> {
+        let mut params: Vec<(&str, String)> = vec![
+            ("user", query.user.to_string()),
+            ("limit", query.limit.to_string()),
+            ("offset", query.offset.to_string()),
+        ];
+
+        if let Some(m) = query.market {
+            params.push(("market", m.to_string()));
+        }
+        if let Some(t) = query.activity_type {
+            params.push(("type", t.to_string()));
+        }
+        if let Some(s) = query.side {
+            params.push(("side", s.to_string()));
+        }
+        if let Some(s) = query.start {
+            params.push(("start", s.to_string()));
+        }
+        if let Some(e) = query.end {
+            params.push(("end", e.to_string()));
+        }
+        if let Some(s) = query.sort_by {
+            params.push(("sortBy", s.to_string()));
+        }
+        if let Some(s) = query.sort_direction {
+            params.push(("sortDirection", s.to_string()));
+        }
+
+        let req = self
+            .client
+            .get(format!("{DATA_API}/activity"))
+            .query(&params);
+
+        let res = req.send().await?.error_for_status()?;
+
+        Ok(serde_json::from_str(res.text().await?.as_str())?)
+    }
+
+    async fn get_value(
+        &self,
+        user: &str,
+        market: Option<&str>,
+    ) -> Result<ValueResponse, Box<dyn std::error::Error>> {
+        let mut params: Vec<(&str, String)> = vec![("user", user.to_string())];
+
+        if let Some(m) = market {
+            params.push(("market", m.to_string()));
+        }
+
+        let req = self
+            .client
+            .get(format!("{DATA_API}/value"))
+            .query(&params);
+
+        let res = req.send().await?.error_for_status()?;
+
+        Ok(serde_json::from_str(res.text().await?.as_str())?)
+    }
+
+    async fn get_holders(
+        &self,
+        market: &str,
+        limit: i32,
+    ) -> Result<TopHoldersResponse, Box<dyn std::error::Error>> {
+        let req = self
+            .client
+            .get(format!("{DATA_API}/holders"))
+            .query(&[("market", market.to_string()), ("limit", limit.to_string())]);
 
         let res = req.send().await?.error_for_status()?;
 

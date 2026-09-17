@@ -4,4 +4,5 @@ pub mod data;
 pub mod gamma;
 pub mod polymarket;
 pub mod types;
+pub mod user_pnl;
 pub mod websocket;

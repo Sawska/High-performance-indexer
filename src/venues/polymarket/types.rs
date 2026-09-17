@@ -465,7 +465,6 @@ pub struct Holder {
     pub verified: Option<bool>,
 }
 
-// GET {DATA_API}/v2/trades -> { data: [...], pagination: {...} }, snake_case, cursor-paged
 #[derive(Debug, Clone, Deserialize)]
 pub struct TradesResponse {
     pub data: Vec<Trade>,
@@ -514,6 +513,76 @@ pub struct History {
     pub p: f64,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct OrderBook {
+    pub market: String,
+    pub asset_id: String,
+    pub timestamp: String,
+    pub hash: String,
+    pub bids: Vec<OrderLevel>,
+    pub asks: Vec<OrderLevel>,
+    pub min_order_size: Option<String>,
+    pub tick_size: Option<String>,
+    pub neg_risk: Option<bool>,
+    pub last_trade_price: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct OrderLevel {
+    pub price: String,
+    pub size: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PriceResponse {
+    pub price: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct MidpointResponse {
+    pub mid: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpreadResponse {
+    pub spread: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LastTradePriceResponse {
+    pub price: String,
+    pub side: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TickSizeResponse {
+    pub minimum_tick_size: f64,
+}
+
+pub type PricesResponse = std::collections::HashMap<String, std::collections::HashMap<String, String>>;
+
+pub type TokenValueMap = std::collections::HashMap<String, String>;
+
+pub struct PriceHistoryQuery<'a> {
+    pub market: &'a str,
+    pub interval: Option<&'a str>,
+    pub start_ts: Option<i64>,
+    pub end_ts: Option<i64>,
+    pub fidelity: Option<i32>,
+}
+
+impl<'a> PriceHistoryQuery<'a> {
+    pub fn new(market: &'a str) -> Self {
+        Self {
+            market,
+            interval: None,
+            start_ts: None,
+            end_ts: None,
+            fidelity: None,
+        }
+    }
+}
+
 pub struct TradesQuery<'a> {
     pub condition_id: Option<&'a str>,
     pub limit: i32,
@@ -537,3 +606,157 @@ impl Default for TradesQuery<'_> {
         }
     }
 }
+
+pub type PositionsResponse = Vec<Position>;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Position {
+    pub proxy_wallet: String,
+    pub asset: String,
+    pub condition_id: String,
+    pub size: f64,
+    pub avg_price: f64,
+    pub initial_value: f64,
+    pub current_value: f64,
+    pub cash_pnl: f64,
+    pub percent_pnl: f64,
+    pub total_bought: f64,
+    pub realized_pnl: f64,
+    pub percent_realized_pnl: f64,
+    pub cur_price: f64,
+    pub redeemable: bool,
+    pub mergeable: bool,
+    pub title: Option<String>,
+    pub slug: Option<String>,
+    pub icon: Option<String>,
+    pub event_slug: Option<String>,
+    pub outcome: Option<String>,
+    pub outcome_index: Option<i64>,
+    pub opposite_outcome: Option<String>,
+    pub opposite_asset: Option<String>,
+    pub end_date: Option<String>,
+    pub negative_risk: Option<bool>,
+}
+
+pub type ActivityResponse = Vec<Activity>;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Activity {
+    pub proxy_wallet: String,
+    pub timestamp: i64,
+    pub condition_id: String,
+    #[serde(rename = "type")]
+    pub activity_type: String,
+    pub size: f64,
+    pub usdc_size: f64,
+    pub transaction_hash: String,
+    pub price: f64,
+    pub asset: String,
+    pub side: Option<String>,
+    pub outcome_index: Option<i64>,
+    pub title: Option<String>,
+    pub slug: Option<String>,
+    pub icon: Option<String>,
+    pub event_slug: Option<String>,
+    pub outcome: Option<String>,
+    pub name: Option<String>,
+    pub pseudonym: Option<String>,
+    pub bio: Option<String>,
+    pub profile_image: Option<String>,
+    pub profile_image_optimized: Option<String>,
+}
+
+pub type ValueResponse = Vec<UserValue>;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserValue {
+    pub user: String,
+    pub value: f64,
+}
+
+pub struct PositionsQuery<'a> {
+    pub user: &'a str,
+    pub market: Option<&'a str>,
+    pub limit: i32,
+    pub offset: i32,
+    pub sort_by: Option<&'a str>,
+    pub sort_direction: Option<&'a str>,
+    pub redeemable: Option<bool>,
+    pub mergeable: Option<bool>,
+}
+
+impl<'a> PositionsQuery<'a> {
+    pub fn new(user: &'a str) -> Self {
+        Self {
+            user,
+            market: None,
+            limit: 100,
+            offset: 0,
+            sort_by: None,
+            sort_direction: None,
+            redeemable: None,
+            mergeable: None,
+        }
+    }
+}
+
+pub struct ActivityQuery<'a> {
+    pub user: &'a str,
+    pub market: Option<&'a str>,
+    pub activity_type: Option<&'a str>,
+    pub side: Option<&'a str>,
+    pub start: Option<i64>,
+    pub end: Option<i64>,
+    pub limit: i32,
+    pub offset: i32,
+    pub sort_by: Option<&'a str>,
+    pub sort_direction: Option<&'a str>,
+}
+
+impl<'a> ActivityQuery<'a> {
+    pub fn new(user: &'a str) -> Self {
+        Self {
+            user,
+            market: None,
+            activity_type: None,
+            side: None,
+            start: None,
+            end: None,
+            limit: 100,
+            offset: 0,
+            sort_by: None,
+            sort_direction: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PublicSearchResponse {
+    #[serde(default)]
+    pub profiles: Vec<Profile>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Profile {
+    pub proxy_wallet: String,
+    pub name: Option<String>,
+    pub pseudonym: Option<String>,
+    pub bio: Option<String>,
+    pub display_username_public: Option<bool>,
+    pub profile_image: Option<String>,
+    pub profile_image_optimized: Option<String>,
+    pub verified: Option<bool>,
+}
+
+pub type UserPnlResponse = Vec<UserPnlPoint>;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserPnlPoint {
+    pub t: i64,
+    pub p: f64,
+}
+
+
