@@ -759,4 +759,32 @@ pub struct UserPnlPoint {
     pub p: f64,
 }
 
+#[derive(Debug,Clone,Deserialize)]
+#[serde(tag = "event_type", rename_all = "snake_case")]
+pub enum MarketEvent {
+    Book(OrderBook),
+    PriceChange(PriceChangeEvent),
+    LastTradePrice(LastTradePriceEvent),
+    TickSizeChange(TickSizeChangeEvent),
+    #[serde(other)]
+    Unknow,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PriceChangeEvent {
+    pub market: String,
+    pub price_changes: Vec<PriceChange>,
+    pub timestamp: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PriceChange {
+    pub asset_id: String,
+    pub price: String,
+    pub size: String,
+    pub side: String,
+    pub hash: String,
+    pub best_ask: String,
+}
+
 
