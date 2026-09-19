@@ -18,31 +18,10 @@ impl DataApi {
         &self,
         query: TradesQuery<'_>,
     ) -> Result<TradesResponse, Box<dyn std::error::Error>> {
-        let mut params: Vec<(&str, String)> = vec![
-            ("limit", query.limit.to_string()),
-            ("takerOnly", query.taker_only.to_string()),
-        ];
-
-        if let Some(c) = query.condition_id {
-            params.push(("conditionId", c.to_string()));
-        }
-        if let Some(c) = query.cursor {
-            params.push(("cursor", c.to_string()));
-        }
-        if let Some(s) = query.side {
-            params.push(("side", s.to_string()));
-        }
-        if let Some(s) = query.start {
-            params.push(("start", s.to_string()));
-        }
-        if let Some(e) = query.end {
-            params.push(("end", e.to_string()));
-        }
-
         let req = self
             .client
             .get(format!("{DATA_API}/v2/trades"))
-            .query(&params);
+            .query(&query);
 
         let res = req.send().await?.error_for_status()?;
 
@@ -53,32 +32,10 @@ impl DataApi {
         &self,
         query: PositionsQuery<'_>,
     ) -> Result<PositionsResponse, Box<dyn std::error::Error>> {
-        let mut params: Vec<(&str, String)> = vec![
-            ("user", query.user.to_string()),
-            ("limit", query.limit.to_string()),
-            ("offset", query.offset.to_string()),
-        ];
-
-        if let Some(m) = query.market {
-            params.push(("market", m.to_string()));
-        }
-        if let Some(s) = query.sort_by {
-            params.push(("sortBy", s.to_string()));
-        }
-        if let Some(s) = query.sort_direction {
-            params.push(("sortDirection", s.to_string()));
-        }
-        if let Some(r) = query.redeemable {
-            params.push(("redeemable", r.to_string()));
-        }
-        if let Some(m) = query.mergeable {
-            params.push(("mergeable", m.to_string()));
-        }
-
         let req = self
             .client
             .get(format!("{DATA_API}/positions"))
-            .query(&params);
+            .query(&query);
 
         let res = req.send().await?.error_for_status()?;
 
@@ -89,38 +46,10 @@ impl DataApi {
         &self,
         query: ActivityQuery<'_>,
     ) -> Result<ActivityResponse, Box<dyn std::error::Error>> {
-        let mut params: Vec<(&str, String)> = vec![
-            ("user", query.user.to_string()),
-            ("limit", query.limit.to_string()),
-            ("offset", query.offset.to_string()),
-        ];
-
-        if let Some(m) = query.market {
-            params.push(("market", m.to_string()));
-        }
-        if let Some(t) = query.activity_type {
-            params.push(("type", t.to_string()));
-        }
-        if let Some(s) = query.side {
-            params.push(("side", s.to_string()));
-        }
-        if let Some(s) = query.start {
-            params.push(("start", s.to_string()));
-        }
-        if let Some(e) = query.end {
-            params.push(("end", e.to_string()));
-        }
-        if let Some(s) = query.sort_by {
-            params.push(("sortBy", s.to_string()));
-        }
-        if let Some(s) = query.sort_direction {
-            params.push(("sortDirection", s.to_string()));
-        }
-
         let req = self
             .client
             .get(format!("{DATA_API}/activity"))
-            .query(&params);
+            .query(&query);
 
         let res = req.send().await?.error_for_status()?;
 

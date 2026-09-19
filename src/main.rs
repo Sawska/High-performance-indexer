@@ -1,3 +1,4 @@
+mod db;
 mod venues;
 
 fn main() {

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ListMarketsResponse {
@@ -563,11 +563,17 @@ pub type PricesResponse = std::collections::HashMap<String, std::collections::Ha
 
 pub type TokenValueMap = std::collections::HashMap<String, String>;
 
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
 pub struct PriceHistoryQuery<'a> {
     pub market: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub interval: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start_ts: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_ts: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fidelity: Option<i32>,
 }
 
@@ -583,12 +589,19 @@ impl<'a> PriceHistoryQuery<'a> {
     }
 }
 
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
 pub struct TradesQuery<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub condition_id: Option<&'a str>,
     pub limit: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub side: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<i64>,
     pub taker_only: bool,
 }
@@ -676,14 +689,21 @@ pub struct UserValue {
     pub value: f64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
 pub struct PositionsQuery<'a> {
     pub user: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub market: Option<&'a str>,
     pub limit: i32,
     pub offset: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_direction: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub redeemable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mergeable: Option<bool>,
 }
 
@@ -702,16 +722,25 @@ impl<'a> PositionsQuery<'a> {
     }
 }
 
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
 pub struct ActivityQuery<'a> {
     pub user: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub market: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
     pub activity_type: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub side: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<i64>,
     pub limit: i32,
     pub offset: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_direction: Option<&'a str>,
 }
 
@@ -788,3 +817,22 @@ pub struct PriceChange {
 }
 
 
+#[derive(Debug,Clone,Deserialize)]
+pub struct LastTradePriceEvent {
+    pub market: String,
+    pub asset_id: String,
+    pub price: String,
+    pub size: Option<String>,
+    pub side: String,
+    pub timestamp: Option<String>,
+    pub transaction_hash: Option<String>,
+}
+
+#[derive(Debug,Clone,Deserialize)]
+pub struct TickSizeChangeEvent {
+    pub market: String,
+    pub asset_id: String,
+    pub old_tick_size: Option<String>,
+    pub new_tick_size: String,
+    pub timestamp: Option<String>,
+}
