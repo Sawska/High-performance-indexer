@@ -6,7 +6,7 @@ pub struct ListMarketsResponse {
     pub next_cursor: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListMarkets {
     pub id: String,
@@ -139,7 +139,7 @@ pub struct ListMarkets {
     pub fee_schedule: FeeSchedule,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeSchedule {
     pub exponent: Option<f64>,
@@ -148,7 +148,7 @@ pub struct FeeSchedule {
     pub rebate_rate: Option<f64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImageOptimized {
     pub id: String,
@@ -163,7 +163,7 @@ pub struct ImageOptimized {
     pub relname: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IconOptimized {
     pub id: String,
@@ -379,7 +379,7 @@ pub struct Collections {
     pub header_image_optimized: HeaderImageOptimized,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tags {
     pub id: Option<String>,
@@ -395,7 +395,7 @@ pub struct Tags {
     pub is_carousel: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Categories {
     pub id: String,

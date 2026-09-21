@@ -1,10 +1,3 @@
-//! Batched writer for the Polymarket websocket firehose.
-//!
-//! The websocket task never touches Postgres directly: it pushes decoded
-//! `MarketEvent`s into a channel, and the task spawned here buffers them and
-//! flushes with array INSERTs. One INSERT per message would cap out around a
-//! few hundred rows/sec and fall behind the feed.
-
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use tokio::sync::mpsc;
@@ -61,8 +54,6 @@ impl Batch {
     }
 }
 
-/// Spawn the writer task. Send decoded events into the returned channel.
-/// Dropping every sender flushes what is buffered and ends the task.
 pub fn spawn(pool: PgPool) -> mpsc::Sender<MarketEvent> {
     let (tx, mut rx) = mpsc::channel::<MarketEvent>(CHANNEL_CAP);
 
@@ -92,7 +83,6 @@ pub fn spawn(pool: PgPool) -> mpsc::Sender<MarketEvent> {
     tx
 }
 
-/// Epoch milliseconds as sent by the API, e.g. "1782753357257".
 fn parse_ts(raw: &str) -> Option<DateTime<Utc>> {
     DateTime::from_timestamp_millis(raw.parse::<i64>().ok()?)
 }
@@ -127,7 +117,6 @@ fn push_event(batch: &mut Batch, ev: MarketEvent) {
                 eprintln!("price_change: unparseable ts for market {}", e.market);
                 return;
             };
-            // One message carries many level updates; each becomes a row.
             for c in e.price_changes {
                 let (Some(price), Some(size)) = (parse_num(&c.price), parse_num(&c.size)) else {
                     continue;
@@ -162,7 +151,6 @@ fn push_event(batch: &mut Batch, ev: MarketEvent) {
             });
         }
 
-        // Book snapshots have no table yet - see the note in schema.sql.
         MarketEvent::Book(_) => {}
         MarketEvent::Unknow => {}
     }
