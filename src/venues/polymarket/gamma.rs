@@ -1,15 +1,15 @@
 use super::consts::GAMMA_API;
 use super::types::{ListMarketsResponse, Profile, PublicSearchResponse};
-struct GammaApi {
+pub struct GammaApi {
     client: reqwest::Client,
 }
 
 impl GammaApi {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
         Self { client }
     }
-    async fn list_markets(
+    pub async fn list_markets(
         &self,
         limit: i32,
         after_cursor: Option<&str>,
@@ -28,7 +28,7 @@ impl GammaApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn search_profiles(
+    pub async fn search_profiles(
         &self,
         query: &str,
         limit_per_type: i32,

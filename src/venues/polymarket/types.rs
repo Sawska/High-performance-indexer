@@ -93,10 +93,10 @@ pub struct ListMarkets {
     pub accepting_orders: Option<bool>,
     pub notifications_enabled: Option<bool>,
     pub score: Option<i64>,
-    pub image_optimized: ImageOptimized,
-    pub icon_optimized: IconOptimized,
-    pub categories: Categories,
-    pub tags: Tags,
+    pub image_optimized: Option<ImageOptimized>,
+    pub icon_optimized: Option<IconOptimized>,
+    pub categories: Option<Categories>,
+    pub tags: Option<Tags>,
     pub creator: Option<String>,
     pub ready: Option<bool>,
     pub funded: Option<bool>,
@@ -136,7 +136,7 @@ pub struct ListMarkets {
     pub rfq_enabled: Option<bool>,
     pub event_start_time: Option<String>,
     pub fees_enabled: Option<bool>,
-    pub fee_schedule: FeeSchedule,
+    pub fee_schedule: Option<FeeSchedule>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

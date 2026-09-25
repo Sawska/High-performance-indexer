@@ -1,4 +1,7 @@
+mod api;
 mod db;
+mod scraper;
+mod stats;
 mod venues;
 
 use std::error::Error;
@@ -11,16 +14,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     sqlx::raw_sql(include_str!("../schema.sql")).execute(&pool).await?;
 
-    let tx = db::writer::spawn(pool.clone());
+    let http_addr = std::env::var("HTTP_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
+    let http_addr = http_addr.parse()?;
+    let web_dir = std::env::var("WEB_DIR").unwrap_or_else(|_| "web/dist".to_string());
+    let api_pool = pool.clone();
+    tokio::spawn(async move {
+        if let Err(e) = api::serve(api_pool, http_addr, web_dir.as_ref()).await {
+            eprintln!("api: {e}");
+        }
+    });
 
-    let token_ids: Vec<String> = std::env::var("ASSET_IDS")?
-    .split(',')
-    .map(str::to_owned)
-    .collect();
+    let scrape = scraper::run(pool.clone(), scraper::Config::from_env());
+
+    // The websocket needs an explicit asset list; without one the REST scrape
+    // is the whole job. Both share the task so neither needs to be `Send`.
+    let Ok(assets) = std::env::var("ASSET_IDS") else {
+        scrape.await;
+        return Ok(());
+    };
+
+    let token_ids: Vec<String> = assets.split(',').map(str::to_owned).collect();
+
+    let tx = db::writer::spawn(pool.clone());
 
     let mut ws = PolymarketWebsocket::connect().await?;
     ws.subcribe(&token_ids).await?;
-    ws.run(tx).await?;
+
+    tokio::select! {
+        res = ws.run(tx) => res?,
+        _ = scrape => {}
+    }
 
     Ok(())
 }

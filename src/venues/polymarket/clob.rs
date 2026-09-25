@@ -5,18 +5,18 @@ use super::types::{
 };
 use serde_json::json;
 
-struct ClobApi {
+pub struct ClobApi {
     client: reqwest::Client,
 }
 
 impl ClobApi {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
 
         Self { client }
     }
     
-    async fn get_book(&self, token_id: &str) -> Result<OrderBook, Box<dyn std::error::Error>> {
+    pub async fn get_book(&self, token_id: &str) -> Result<OrderBook, Box<dyn std::error::Error>> {
         let req = self
             .client
             .get(format!("{CLOB_POLYMARKET}/book"))
@@ -27,7 +27,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_books(
+    pub async fn get_books(
         &self,
         token_ids: &[&str],
     ) -> Result<Vec<OrderBook>, Box<dyn std::error::Error>> {
@@ -43,7 +43,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_price(
+    pub async fn get_price(
         &self,
         token_id: &str,
         side: &str,
@@ -58,7 +58,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_prices(
+    pub async fn get_prices(
         &self,
         params: &[(&str, &str)],
     ) -> Result<PricesResponse, Box<dyn std::error::Error>> {
@@ -77,7 +77,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_midpoint(
+    pub async fn get_midpoint(
         &self,
         token_id: &str,
     ) -> Result<MidpointResponse, Box<dyn std::error::Error>> {
@@ -91,7 +91,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_midpoints(
+    pub async fn get_midpoints(
         &self,
         token_ids: &[&str],
     ) -> Result<TokenValueMap, Box<dyn std::error::Error>> {
@@ -107,7 +107,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_spread(
+    pub async fn get_spread(
         &self,
         token_id: &str,
     ) -> Result<SpreadResponse, Box<dyn std::error::Error>> {
@@ -121,7 +121,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_spreads(
+    pub async fn get_spreads(
         &self,
         token_ids: &[&str],
     ) -> Result<TokenValueMap, Box<dyn std::error::Error>> {
@@ -137,7 +137,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_last_trade_price(
+    pub async fn get_last_trade_price(
         &self,
         token_id: &str,
     ) -> Result<LastTradePriceResponse, Box<dyn std::error::Error>> {
@@ -151,7 +151,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_tick_size(
+    pub async fn get_tick_size(
         &self,
         token_id: &str,
     ) -> Result<TickSizeResponse, Box<dyn std::error::Error>> {
@@ -165,7 +165,7 @@ impl ClobApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_history(
+    pub async fn get_history(
         &self,
         query: PriceHistoryQuery<'_>,
     ) -> Result<PriceHistoryResponse, Box<dyn std::error::Error>> {

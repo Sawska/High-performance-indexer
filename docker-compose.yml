@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: indexer
+      POSTGRES_PASSWORD: indexer
+      POSTGRES_DB: indexer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexer -d indexer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    profiles: ["clickhouse"]
+    environment:
+      CLICKHOUSE_DB: indexer
+      CLICKHOUSE_USER: indexer
+      CLICKHOUSE_PASSWORD: indexer
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - chdata:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  indexer:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://indexer:indexer@postgres:5432/indexer
+
+      ASSET_IDS: "${ASSET_IDS:-}"
+
+      # Set to true once the UI is served over HTTPS.
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+
+      SCRAPE_INTERVAL_SECS: "${SCRAPE_INTERVAL_SECS:-300}"
+      SCRAPE_CONCURRENCY: "${SCRAPE_CONCURRENCY:-8}"
+      SCRAPE_MAX_MARKETS: "${SCRAPE_MAX_MARKETS:-0}"
+      SCRAPE_MAX_MARKETS_DEEP: "${SCRAPE_MAX_MARKETS_DEEP:-500}"
+      SCRAPE_WALLETS_PER_CYCLE: "${SCRAPE_WALLETS_PER_CYCLE:-200}"
+
+      CLICKHOUSE_URL: "${CLICKHOUSE_URL:-http://clickhouse:8123}"
+      CLICKHOUSE_DB: "${CLICKHOUSE_DB:-indexer}"
+      CLICKHOUSE_USER: "${CLICKHOUSE_USER:-indexer}"
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-indexer}"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  chdata:

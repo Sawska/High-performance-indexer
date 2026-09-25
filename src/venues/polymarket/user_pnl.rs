@@ -1,18 +1,18 @@
 use super::consts::USER_PNL_API;
 use super::types::UserPnlResponse;
 
-struct UserPnlApi {
+pub struct UserPnlApi {
     client: reqwest::Client,
 }
 
 impl UserPnlApi {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
 
         Self { client }
     }
 
-    async fn get_pnl(
+    pub async fn get_pnl(
         &self,
         user_address: &str,
         interval: &str,

@@ -32,25 +32,6 @@ CREATE TABLE IF NOT EXISTS tick_size_changes (
 CREATE INDEX IF NOT EXISTS tick_size_changes_asset_ts
     ON tick_size_changes (asset_id, ts DESC);
 
--- ---------------------------------------------------------------------------
--- REST-scraped data.
---
--- The websocket tables above are event streams: append-only, never revised.
--- These are a mix of three shapes, and the shape decides the key:
---   dimension  (markets, profiles)        -- current state, upserted in place
---   snapshot   (books, positions, holders, user_values, quotes)
---                                         -- API returns "now", so captured_at
---                                            is part of the key and history
---                                            accumulates row by row
---   event      (data_trades, activity, price_history, user_pnl)
---                                         -- immutable, keyed naturally so a
---                                            re-scrape of overlapping pages is
---                                            a no-op
--- ---------------------------------------------------------------------------
-
--- Gamma /markets/keyset. Explicit columns cover what is queried; `raw` keeps
--- the full payload so a new upstream field is not lost before the schema
--- catches up.
 CREATE TABLE IF NOT EXISTS markets (
     id                        TEXT PRIMARY KEY,
     question                  TEXT,
@@ -81,7 +62,6 @@ CREATE TABLE IF NOT EXISTS markets (
 CREATE INDEX IF NOT EXISTS markets_condition_id ON markets (condition_id);
 CREATE INDEX IF NOT EXISTS markets_slug         ON markets (slug);
 
--- Gamma /public-search, plus the profile fields embedded in holders/trades.
 CREATE TABLE IF NOT EXISTS profiles (
     proxy_wallet            TEXT PRIMARY KEY,
     name                    TEXT,
@@ -94,8 +74,6 @@ CREATE TABLE IF NOT EXISTS profiles (
     scraped_at              TIMESTAMPTZ NOT NULL
 );
 
--- CLOB /book and /books. Header and levels split so one row per level keeps
--- depth queryable; the pair shares (asset_id, ts, hash).
 CREATE TABLE IF NOT EXISTS book_snapshots (
     asset_id         TEXT        NOT NULL,
     market           TEXT        NOT NULL,
@@ -113,27 +91,23 @@ CREATE TABLE IF NOT EXISTS book_levels (
     asset_id  TEXT        NOT NULL,
     ts        TIMESTAMPTZ NOT NULL,
     hash      TEXT        NOT NULL,
-    side      TEXT        NOT NULL,   -- 'bid' | 'ask'
-    level_idx INT         NOT NULL,   -- 0 = best, as returned by the API
+    side      TEXT        NOT NULL,   
+    level_idx INT         NOT NULL,   
     price     NUMERIC     NOT NULL,
     size      NUMERIC     NOT NULL,
     PRIMARY KEY (asset_id, ts, hash, side, level_idx)
 );
 
--- CLOB /price, /midpoint, /spread, /last-trade-price, /tick-size. One narrow
--- table instead of five: every endpoint returns a single scalar per token, and
--- `kind` keeps them apart.
 CREATE TABLE IF NOT EXISTS quotes (
     asset_id   TEXT        NOT NULL,
-    kind       TEXT        NOT NULL,   -- 'price'|'midpoint'|'spread'|'last_trade_price'|'tick_size'
-    side       TEXT,                   -- only set for 'price' and 'last_trade_price'
+    kind       TEXT        NOT NULL,   
+    side       TEXT,                   
     value      NUMERIC     NOT NULL,
     captured_at TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS quotes_asset_kind_ts
     ON quotes (asset_id, kind, captured_at DESC);
 
--- CLOB /prices-history.
 CREATE TABLE IF NOT EXISTS price_history (
     market TEXT        NOT NULL,
     ts     TIMESTAMPTZ NOT NULL,
@@ -141,8 +115,6 @@ CREATE TABLE IF NOT EXISTS price_history (
     PRIMARY KEY (market, ts)
 );
 
--- Data API /v2/trades. Separate from the websocket `trades` table: this one is
--- wallet-attributed and arrives by backfill, not live.
 CREATE TABLE IF NOT EXISTS data_trades (
     transaction_hash TEXT        NOT NULL,
     proxy_wallet     TEXT        NOT NULL,
@@ -163,7 +135,6 @@ CREATE TABLE IF NOT EXISTS data_trades (
 CREATE INDEX IF NOT EXISTS data_trades_wallet_ts ON data_trades (proxy_wallet, ts DESC);
 CREATE INDEX IF NOT EXISTS data_trades_token_ts  ON data_trades (token_id, ts DESC);
 
--- Data API /positions. A snapshot of open exposure, so captured_at is in the key.
 CREATE TABLE IF NOT EXISTS positions (
     proxy_wallet         TEXT        NOT NULL,
     asset                TEXT        NOT NULL,
@@ -189,7 +160,6 @@ CREATE TABLE IF NOT EXISTS positions (
 );
 CREATE INDEX IF NOT EXISTS positions_wallet_ts ON positions (proxy_wallet, captured_at DESC);
 
--- Data API /activity.
 CREATE TABLE IF NOT EXISTS activity (
     transaction_hash TEXT        NOT NULL,
     proxy_wallet     TEXT        NOT NULL,
@@ -211,8 +181,6 @@ CREATE TABLE IF NOT EXISTS activity (
 );
 CREATE INDEX IF NOT EXISTS activity_wallet_ts ON activity (proxy_wallet, ts DESC);
 
--- Data API /value. `market` is '' rather than NULL for the portfolio-wide
--- figure, because NULL cannot participate in a primary key.
 CREATE TABLE IF NOT EXISTS user_values (
     proxy_wallet TEXT        NOT NULL,
     market       TEXT        NOT NULL DEFAULT '',
@@ -221,7 +189,6 @@ CREATE TABLE IF NOT EXISTS user_values (
     PRIMARY KEY (proxy_wallet, market, captured_at)
 );
 
--- Data API /holders.
 CREATE TABLE IF NOT EXISTS token_holders (
     token         TEXT        NOT NULL,
     proxy_wallet  TEXT        NOT NULL,
@@ -233,10 +200,29 @@ CREATE TABLE IF NOT EXISTS token_holders (
 );
 CREATE INDEX IF NOT EXISTS token_holders_token_ts ON token_holders (token, captured_at DESC);
 
--- /user-pnl.
 CREATE TABLE IF NOT EXISTS user_pnl (
     proxy_wallet TEXT        NOT NULL,
     ts           TIMESTAMPTZ NOT NULL,
     pnl          NUMERIC     NOT NULL,
     PRIMARY KEY (proxy_wallet, ts)
 );
+
+CREATE INDEX IF NOT EXISTS data_trades_condition_ts ON data_trades (condition_id, ts DESC);
+CREATE INDEX IF NOT EXISTS data_trades_ts           ON data_trades (ts DESC);
+CREATE INDEX IF NOT EXISTS markets_volume           ON markets (volume_num DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS activity_ts              ON activity (ts DESC);
+
+CREATE TABLE IF NOT EXISTS users (
+    id            BIGSERIAL   PRIMARY KEY,
+    email         TEXT        NOT NULL UNIQUE,
+    password_hash TEXT        NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT        PRIMARY KEY,
+    user_id    BIGINT      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id);

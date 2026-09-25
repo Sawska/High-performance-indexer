@@ -1,0 +1,14 @@
+target/
+.git/
+.gitignore
+.github/
+.idea/
+.DS_Store
+**/.DS_Store
+.pre-commit-config.yaml
+Dockerfile
+.dockerignore
+docker-compose.yml
+*.md
+web/node_modules/
+web/dist/

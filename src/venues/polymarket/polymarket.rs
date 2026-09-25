@@ -1,18 +1,18 @@
 use super::consts::POLYMARKET_API;
 use super::types::TopHoldersResponse;
 use std::error::Error;
-struct Polymarket {
+pub struct Polymarket {
     client: reqwest::Client,
 }
 
 impl Polymarket {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
 
         Self { client }
     }
 
-    async fn top_holders(
+    pub async fn top_holders(
         &self,
         after_cursor: Option<&str>,
         condition_id: &str,

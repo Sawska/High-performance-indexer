@@ -4,17 +4,17 @@ use crate::venues::polymarket::types::{
     TradesQuery, TradesResponse, ValueResponse,
 };
 
-struct DataApi {
+pub struct DataApi {
     client: reqwest::Client,
 }
 
 impl DataApi {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
         Self { client }
     }
 
-    async fn get_trades(
+    pub async fn get_trades(
         &self,
         query: TradesQuery<'_>,
     ) -> Result<TradesResponse, Box<dyn std::error::Error>> {
@@ -28,7 +28,7 @@ impl DataApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_positions(
+    pub async fn get_positions(
         &self,
         query: PositionsQuery<'_>,
     ) -> Result<PositionsResponse, Box<dyn std::error::Error>> {
@@ -42,7 +42,7 @@ impl DataApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_activity(
+    pub async fn get_activity(
         &self,
         query: ActivityQuery<'_>,
     ) -> Result<ActivityResponse, Box<dyn std::error::Error>> {
@@ -56,7 +56,7 @@ impl DataApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_value(
+    pub async fn get_value(
         &self,
         user: &str,
         market: Option<&str>,
@@ -77,7 +77,7 @@ impl DataApi {
         Ok(serde_json::from_str(res.text().await?.as_str())?)
     }
 
-    async fn get_holders(
+    pub async fn get_holders(
         &self,
         market: &str,
         limit: i32,
