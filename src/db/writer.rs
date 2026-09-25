@@ -269,3 +269,69 @@ async fn flush_tick_sizes(pool: &PgPool, buf: &mut Vec<TickSizeRow>) {
     }
     buf.clear();
 }
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+
+    fn event(json: &str) -> MarketEvent {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn last_trade_price_becomes_a_trade_row() {
+        let mut b = Batch::default();
+        push_event(&mut b, event(r#"{"event_type":"last_trade_price","market":"0xm","asset_id":"t1",
+            "price":"0.42","size":"10","side":"BUY","timestamp":"1700000000123","transaction_hash":"0xh"}"#));
+        assert_eq!(b.trades.len(), 1);
+        let t = &b.trades[0];
+        assert_eq!((t.asset_id.as_str(), t.market.as_str(), t.side.as_str()), ("t1", "0xm", "BUY"));
+        assert_eq!((t.price, t.size), (0.42, Some(10.0)));
+        assert_eq!(t.ts.timestamp_millis(), 1_700_000_000_123);
+        assert_eq!(t.transaction_hash.as_deref(), Some("0xh"));
+    }
+
+    #[test]
+    fn events_without_a_usable_timestamp_are_dropped() {
+        let mut b = Batch::default();
+        push_event(&mut b, event(r#"{"event_type":"last_trade_price","market":"m","asset_id":"t",
+            "price":"0.4","side":"BUY"}"#));
+        push_event(&mut b, event(r#"{"event_type":"tick_size_change","market":"m","asset_id":"t",
+            "new_tick_size":"0.01","timestamp":"soon"}"#));
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn price_change_fans_out_and_skips_bad_levels() {
+        let mut b = Batch::default();
+        push_event(&mut b, event(r#"{"event_type":"price_change","market":"0xm","timestamp":"1700000000000",
+            "price_changes":[
+                {"asset_id":"t1","price":"0.5","size":"100","side":"BUY","hash":"h1","best_ask":"0.51"},
+                {"asset_id":"t2","price":"0.5","size":"n/a","side":"SELL","hash":"h2","best_ask":"0.5"},
+                {"asset_id":"t2","price":"0.49","size":"0","side":"SELL","hash":"h3","best_ask":""}
+            ]}"#));
+        assert_eq!(b.price_changes.len(), 2);
+        assert_eq!(b.price_changes[0].best_ask, Some(0.51));
+        assert_eq!(b.price_changes[1].size, 0.0, "size 0 removes a level; it is kept");
+        assert_eq!(b.price_changes[1].best_ask, None);
+        assert!(b.price_changes.iter().all(|c| c.market == "0xm"));
+    }
+
+    #[test]
+    fn tick_size_change_keeps_the_old_size_when_present() {
+        let mut b = Batch::default();
+        push_event(&mut b, event(r#"{"event_type":"tick_size_change","market":"m","asset_id":"t",
+            "old_tick_size":"0.01","new_tick_size":"0.001","timestamp":"1700000000000"}"#));
+        assert_eq!(b.tick_sizes.len(), 1);
+        assert_eq!((b.tick_sizes[0].old_tick_size, b.tick_sizes[0].new_tick_size), (Some(0.01), 0.001));
+    }
+
+    #[test]
+    fn book_and_unknown_events_are_ignored() {
+        let mut b = Batch::default();
+        push_event(&mut b, event(r#"{"event_type":"book","market":"m","asset_id":"t","timestamp":"1",
+            "hash":"h","bids":[],"asks":[]}"#));
+        push_event(&mut b, event(r#"{"event_type":"something_new","whatever":1}"#));
+        assert!(b.is_empty());
+    }
+}

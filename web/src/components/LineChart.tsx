@@ -58,7 +58,14 @@ export function LineChart({ series, height = 240, formatValue, yDomain }: Props)
     return { t0, t1, x, y, ticks, w }
   }, [shown, width, height, yDomain])
 
-  if (!scale) return <div className="empty">No data yet.</div>
+  // Same wrapper as the chart, so the size observer attached on mount keeps
+  // working when data arrives later or a parent swaps the series.
+  if (!scale)
+    return (
+      <div className="chart" ref={wrap}>
+        <div className="empty">No data yet.</div>
+      </div>
+    )
 
   const { t0, t1, x, y, ticks } = scale
 

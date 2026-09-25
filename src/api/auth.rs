@@ -229,3 +229,72 @@ pub async fn require_user(
     req.extensions_mut().insert(user);
     Ok(next.run(req).await)
 }
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+
+    fn creds(email: &str, password: &str) -> Credentials {
+        Credentials {
+            email: email.into(),
+            password: password.into(),
+        }
+    }
+
+    #[test]
+    fn normalize_trims_and_lowercases_email() {
+        let (email, password) = normalize(creds("  Bob@Example.COM ", "hunter22!")).ok().unwrap();
+        assert_eq!(email, "bob@example.com");
+        assert_eq!(password, "hunter22!");
+    }
+
+    #[test]
+    fn normalize_rejects_bad_emails() {
+        for bad in ["", "bob", "@example.com", "bob@", &format!("{}@x.io", "a".repeat(260))] {
+            let err = normalize(creds(bad, "long enough")).err().expect(bad);
+            assert_eq!(err.status, StatusCode::BAD_REQUEST, "{bad}");
+        }
+    }
+
+    #[test]
+    fn normalize_bounds_password_length_in_characters() {
+        assert!(normalize(creds("a@b.c", "seven77")).is_err());
+        assert!(normalize(creds("a@b.c", "eight888")).is_ok());
+        // Eight characters, sixteen bytes: the limit counts characters.
+        assert!(normalize(creds("a@b.c", "пароль12")).is_ok());
+        assert!(normalize(creds("a@b.c", &"x".repeat(MAX_PASSWORD))).is_ok());
+        assert!(normalize(creds("a@b.c", &"x".repeat(MAX_PASSWORD + 1))).is_err());
+    }
+
+    #[test]
+    fn tokens_are_random_and_stored_only_as_sha256() {
+        let (a, b) = (new_token(), new_token());
+        assert_eq!(a.len(), 64);
+        assert_ne!(a, b);
+        assert_eq!(hash_token(&a), hash_token(&a));
+        assert_ne!(hash_token(&a), a);
+        assert_eq!(
+            hash_token("abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn session_cookie_is_http_only_lax_and_site_wide() {
+        let c = session_cookie("tok".into());
+        assert_eq!(c.name(), COOKIE);
+        assert_eq!(c.http_only(), Some(true));
+        assert_eq!(c.same_site(), Some(SameSite::Lax));
+        assert_eq!(c.path(), Some("/"));
+        assert_eq!(c.max_age(), Some(time::Duration::days(SESSION_DAYS)));
+    }
+
+    #[tokio::test]
+    async fn password_hash_round_trips() {
+        let hash = hash_password("correct horse".into()).await.ok().unwrap();
+        assert!(verify_password("correct horse".into(), hash.clone()).await.ok().unwrap());
+        assert!(!verify_password("wrong horse".into(), hash).await.ok().unwrap());
+        // The timing decoy must be a hash that verification accepts as input.
+        assert!(!verify_password("x".into(), DUMMY_HASH.clone()).await.ok().unwrap());
+    }
+}

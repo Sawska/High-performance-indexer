@@ -10,6 +10,8 @@
 
 mod auth;
 mod polymarket;
+#[cfg(test)]
+mod tests;
 
 use std::net::SocketAddr;
 use std::path::Path;
@@ -93,7 +95,8 @@ async fn status(State(pool): State<PgPool>) -> ApiResult<Status> {
     }))
 }
 
-pub async fn serve(pool: PgPool, addr: SocketAddr, web_dir: &Path) -> std::io::Result<()> {
+/// Every route, API and UI, over one pool.
+pub fn router(pool: PgPool, web_dir: &Path) -> Router {
     let signed_in = Router::new()
         .route("/api/status", get(status))
         .route("/api/overview", get(polymarket::overview))
@@ -122,11 +125,15 @@ pub async fn serve(pool: PgPool, addr: SocketAddr, web_dir: &Path) -> std::io::R
 
     let ui = ServeDir::new(web_dir).fallback(ServeFile::new(web_dir.join("index.html")));
 
-    let app = signed_in
+    signed_in
         .merge(public)
         .merge(api_404)
         .with_state(pool)
-        .fallback_service(ui);
+        .fallback_service(ui)
+}
+
+pub async fn serve(pool: PgPool, addr: SocketAddr, web_dir: &Path) -> std::io::Result<()> {
+    let app = router(pool, web_dir);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     if !web_dir.join("index.html").exists() {

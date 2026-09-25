@@ -81,7 +81,7 @@ export function When({ ts, now, tx }: { ts: string; now: number; tx?: string | n
 /** A trade shows its side; other /activity kinds show the kind. */
 export function ActivityType({ type, side }: { type: string; side: string | null }) {
   if (type === 'TRADE' && side) return <span className={`badge ${side === 'BUY' ? 'pos' : 'neg'}`}>{side}</span>
-  return <span className="badge">{type.replace('_', ' ')}</span>
+  return <span className="badge">{type.replaceAll('_', ' ')}</span>
 }
 
 export function TradesTable({ trades, showMarket = true, now }: { trades: Trade[]; showMarket?: boolean; now: number }) {

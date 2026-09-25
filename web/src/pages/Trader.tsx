@@ -136,7 +136,7 @@ export function Trader() {
       <div className="section-head">
         <h2>Activity <Link className="more" to={`/activity?wallet=${t.proxy_wallet}`}>all activity →</Link></h2>
         {types.length > 1 && (
-          <Segmented value={type} onChange={setType} options={[{ value: '', label: 'All' }, ...types.map((v) => ({ value: v, label: v.toLowerCase().replace('_', ' ') }))]} />
+          <Segmented value={type} onChange={setType} options={[{ value: '', label: 'All' }, ...types.map((v) => ({ value: v, label: v.toLowerCase().replaceAll('_', ' ') }))]} />
         )}
       </div>
       {activity.length === 0 ? (

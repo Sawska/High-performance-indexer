@@ -641,3 +641,69 @@ async fn scrape_wallets(
         .collect::<()>()
         .await;
 }
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+
+    #[test]
+    fn rotating_slice_covers_everything_across_cycles() {
+        let items: Vec<u32> = (0..10).collect();
+        assert_eq!(rotating_slice(&items, 0, 7), &items[..], "0 = no cap");
+        assert_eq!(rotating_slice(&items, 10, 3), &items[..]);
+        assert_eq!(rotating_slice(&items, 4, 0), &[0, 1, 2, 3]);
+        assert_eq!(rotating_slice(&items, 4, 1), &[4, 5, 6, 7]);
+        assert_eq!(rotating_slice(&items, 4, 2), &[8, 9], "last window is short");
+        assert_eq!(rotating_slice(&items, 4, 3), &[0, 1, 2, 3], "wraps around");
+
+        let mut seen: Vec<u32> = (0..3).flat_map(|c| rotating_slice(&items, 4, c).to_vec()).collect();
+        seen.sort();
+        assert_eq!(seen, items);
+    }
+
+    #[test]
+    fn parse_token_ids_reads_the_stringified_array() {
+        assert_eq!(parse_token_ids(Some(r#"["1","2"]"#)), vec!["1", "2"]);
+        assert!(parse_token_ids(Some("[]")).is_empty());
+        assert!(parse_token_ids(Some("garbage")).is_empty());
+        assert!(parse_token_ids(None).is_empty());
+    }
+
+    fn market(json: &str) -> ListMarkets {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn is_live_excludes_closed_and_archived() {
+        assert!(is_live(&market(r#"{"id":"1","conditionId":"c"}"#)));
+        assert!(is_live(&market(r#"{"id":"1","conditionId":"c","closed":false,"archived":false}"#)));
+        assert!(!is_live(&market(r#"{"id":"1","conditionId":"c","closed":true}"#)));
+        assert!(!is_live(&market(r#"{"id":"1","conditionId":"c","archived":true}"#)));
+    }
+
+    #[test]
+    fn scalar_quotes_drop_unparseable_values() {
+        let map = HashMap::from([
+            ("a".to_string(), "0.5".to_string()),
+            ("b".to_string(), "".to_string()),
+        ]);
+        let quotes = scalar_quotes(map, "midpoint");
+        assert_eq!(quotes.len(), 1);
+        assert_eq!(quotes[0].asset_id, "a");
+        assert_eq!(quotes[0].kind, "midpoint");
+        assert_eq!(quotes[0].side, None);
+        assert_eq!(quotes[0].value, 0.5);
+    }
+
+    #[test]
+    fn env_overrides_config_and_bad_values_fall_back() {
+        // Keys no other test reads, so setting them cannot race.
+        unsafe {
+            std::env::set_var("SCRAPE_TEST_ONLY_NUM", "42");
+            std::env::set_var("SCRAPE_TEST_ONLY_BAD", "forty-two");
+        }
+        assert_eq!(env_or("SCRAPE_TEST_ONLY_NUM", 7usize), 42);
+        assert_eq!(env_or("SCRAPE_TEST_ONLY_BAD", 7usize), 7);
+        assert_eq!(env_or("SCRAPE_TEST_ONLY_UNSET", 7usize), 7);
+    }
+}

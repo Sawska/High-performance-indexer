@@ -576,7 +576,8 @@ const TRADER_SELECT: &str = "WITH pnl AS (
             FROM user_pnl ORDER BY proxy_wallet, ts DESC
     ), val AS (
         SELECT DISTINCT ON (proxy_wallet) proxy_wallet, value
-            FROM user_values ORDER BY proxy_wallet, captured_at DESC
+            FROM user_values WHERE market = ''
+        ORDER BY proxy_wallet, captured_at DESC
     ), vol AS (
         SELECT proxy_wallet, sum(size * price) AS volume, count(*) AS trades
             FROM data_trades GROUP BY proxy_wallet
@@ -860,4 +861,70 @@ pub async fn activity(
     .await?;
 
     Ok(Json(rows))
+}
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+
+    #[test]
+    fn page_limit_defaults_to_50_and_clamps_to_1_200() {
+        assert_eq!(page_limit(None), 50);
+        assert_eq!(page_limit(Some(0)), 1);
+        assert_eq!(page_limit(Some(-5)), 1);
+        assert_eq!(page_limit(Some(120)), 120);
+        assert_eq!(page_limit(Some(10_000)), 200);
+    }
+
+    #[test]
+    fn json_list_reads_arrays_inside_strings() {
+        assert_eq!(json_list(Some(r#"["Yes", "No"]"#)), vec!["Yes", "No"]);
+        assert!(json_list(Some("not json")).is_empty());
+        assert!(json_list(Some("")).is_empty());
+        assert!(json_list(None).is_empty());
+    }
+
+    fn row() -> MarketRow {
+        MarketRow {
+            id: "1".into(),
+            question: Some("Q?".into()),
+            slug: None,
+            condition_id: "0xc".into(),
+            category: None,
+            closed: None,
+            end_date: None,
+            volume: None,
+            liquidity: None,
+            best_bid: None,
+            best_ask: None,
+            last_trade_price: None,
+            spread: None,
+            outcomes: Some(r#"["Yes","No"]"#.into()),
+            outcome_prices: Some(r#"["0.25","0.75"]"#.into()),
+            clob_token_ids: Some(r#"["t1","t2"]"#.into()),
+            scraped_at: Utc::now(),
+            icon: None,
+            one_day_change: Some(0.05),
+        }
+    }
+
+    #[test]
+    fn market_from_row_unpacks_stringified_lists() {
+        let m = Market::from(row());
+        assert_eq!(m.outcomes, vec!["Yes", "No"]);
+        assert_eq!(m.outcome_prices, vec![0.25, 0.75]);
+        assert_eq!(m.token_ids, vec!["t1", "t2"]);
+        assert!(!m.closed, "a missing closed flag reads as open");
+        assert_eq!(m.one_day_change, Some(0.05));
+    }
+
+    #[test]
+    fn market_from_row_skips_unparseable_prices() {
+        let mut r = row();
+        r.outcome_prices = Some(r#"["0.4","oops"]"#.into());
+        r.closed = Some(true);
+        let m = Market::from(r);
+        assert_eq!(m.outcome_prices, vec![0.4]);
+        assert!(m.closed);
+    }
 }

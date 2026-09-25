@@ -152,3 +152,51 @@ pub fn error(msg: String) {
 pub fn snapshot() -> Snapshot {
     with(|s| s.clone())
 }
+
+#[cfg(test)]
+mod unit {
+    use super::*;
+
+    // The snapshot is process-global, so the whole lifecycle is one test.
+    #[test]
+    fn cycle_lifecycle_is_reflected_in_the_snapshot() {
+        cycle_start(7);
+        stage_start("markets", 0);
+        tick();
+        tick();
+        stage_start("books", 3);
+        error("boom".into());
+        tick();
+        set(|s| s.live_markets = 5);
+
+        let s = snapshot();
+        assert_eq!(s.cycle, 7);
+        assert!(s.cycle_started_at.is_some());
+        assert_eq!(s.live_markets, 5);
+        assert_eq!(s.stages.len(), 2);
+        assert_eq!(s.stages[0].done, 2);
+        assert!(s.stages[0].finished_at.is_some(), "starting a stage closes the previous one");
+        assert_eq!((s.stages[1].done, s.stages[1].total, s.stages[1].errors), (1, 3, 1));
+        assert!(s.stages[1].finished_at.is_none());
+        assert_eq!(s.recent_errors.last().map(|e| e.msg.as_str()), Some("boom"));
+
+        let completed = s.cycles_completed;
+        cycle_end(1234);
+        let s = snapshot();
+        assert_eq!(s.cycles_completed, completed + 1);
+        assert_eq!(s.last_cycle_ms, Some(1234));
+        assert!(s.stages[1].finished_at.is_some(), "ending the cycle closes the open stage");
+
+        for i in 0..ERROR_TAIL + 5 {
+            error(format!("e{i}"));
+        }
+        let s = snapshot();
+        assert_eq!(s.recent_errors.len(), ERROR_TAIL);
+        assert_eq!(s.recent_errors.last().unwrap().msg, format!("e{}", ERROR_TAIL + 4));
+
+        cycle_start(8);
+        let s = snapshot();
+        assert!(s.stages.is_empty(), "a new cycle starts with no stages");
+        assert_eq!(s.live_markets, 0);
+    }
+}

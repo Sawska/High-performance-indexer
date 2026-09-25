@@ -39,7 +39,7 @@ export function Activity() {
         <select value={type} onChange={(e) => set('type', e.target.value)}>
           <option value="">All types</option>
           {TYPES.map((t) => (
-            <option key={t} value={t}>{t.toLowerCase().replace('_', ' ')}</option>
+            <option key={t} value={t}>{t.toLowerCase().replaceAll('_', ' ')}</option>
           ))}
         </select>
         {wallet && <Chip onClear={() => set('wallet', '')}>Trader: {walletName || shortWallet(wallet)}</Chip>}
