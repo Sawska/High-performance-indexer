@@ -57,7 +57,6 @@ async function renderMarket(data: MarketDetail = detail) {
   return { ...view, fetchMock }
 }
 
-/** The <dd> text for a <dt> in the Contract list. */
 const contract = (term: string) => screen.getByText(term, { selector: 'dt' }).nextElementSibling?.textContent
 
 describe('Market page', () => {
@@ -153,7 +152,6 @@ describe('Market page', () => {
   it('links recent trades to the full trades feed for this market', async () => {
     await renderMarket()
     expect(screen.getByRole('link', { name: 'all trades →' })).toHaveAttribute('href', `/trades?market=${CONDITION}`)
-    // The market column is redundant on the market's own page.
     expect(screen.getByRole('link', { name: 'alice' })).toHaveAttribute('href', `/traders/${WALLET}`)
     expect(screen.queryByRole('link', { name: 'Will it rain in London tomorrow?' })).toBeNull()
   })

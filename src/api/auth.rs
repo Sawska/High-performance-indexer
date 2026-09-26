@@ -1,13 +1,3 @@
-//! Email + password accounts with cookie sessions.
-//!
-//! The cookie holds a random token; the `sessions` table holds only its
-//! SHA-256, so a leaked database does not hand out live sessions. The cookie is
-//! HttpOnly and SameSite=Lax, and every state-changing endpoint takes a JSON
-//! body, which a cross-site form cannot send -- that is the CSRF defence.
-//!
-//! `COOKIE_SECURE=true` adds the Secure flag; leave it off for plain-HTTP
-//! localhost.
-
 use std::sync::LazyLock;
 
 use argon2::Argon2;
@@ -65,7 +55,6 @@ fn session_cookie(token: String) -> Cookie<'static> {
         .build()
 }
 
-/// Hashing is deliberately slow, so it runs off the async workers.
 async fn hash_password(password: String) -> Result<String, ApiError> {
     tokio::task::spawn_blocking(move || {
         let salt = SaltString::generate(&mut OsRng);
@@ -89,8 +78,6 @@ async fn verify_password(password: String, hash: String) -> Result<bool, ApiErro
     .map_err(ApiError::internal)?
 }
 
-/// Verified against when the email is unknown, so a miss costs the same time
-/// as a wrong password and does not reveal which emails have accounts.
 static DUMMY_HASH: LazyLock<String> = LazyLock::new(|| {
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
@@ -216,7 +203,6 @@ pub async fn me(State(pool): State<PgPool>, jar: CookieJar) -> Result<Json<User>
         .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "not signed in"))
 }
 
-/// Rejects the request with 401 unless it carries a live session.
 pub async fn require_user(
     State(pool): State<PgPool>,
     jar: CookieJar,
@@ -260,7 +246,6 @@ mod unit {
     fn normalize_bounds_password_length_in_characters() {
         assert!(normalize(creds("a@b.c", "seven77")).is_err());
         assert!(normalize(creds("a@b.c", "eight888")).is_ok());
-        // Eight characters, sixteen bytes: the limit counts characters.
         assert!(normalize(creds("a@b.c", "пароль12")).is_ok());
         assert!(normalize(creds("a@b.c", &"x".repeat(MAX_PASSWORD))).is_ok());
         assert!(normalize(creds("a@b.c", &"x".repeat(MAX_PASSWORD + 1))).is_err());
@@ -294,7 +279,6 @@ mod unit {
         let hash = hash_password("correct horse".into()).await.ok().unwrap();
         assert!(verify_password("correct horse".into(), hash.clone()).await.ok().unwrap());
         assert!(!verify_password("wrong horse".into(), hash).await.ok().unwrap());
-        // The timing decoy must be a hash that verification accepts as input.
         assert!(!verify_password("x".into(), DUMMY_HASH.clone()).await.ok().unwrap());
     }
 }

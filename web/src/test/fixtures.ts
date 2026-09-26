@@ -1,4 +1,3 @@
-// Small fixtures typed against api.ts, so a response type change breaks tsc here.
 import type { ActivityFeedRow, Activity, Market, MarketDetail, Trade, TraderDetail } from '../api'
 
 export const WALLET = '0xabcdef0123456789abcdef0123456789abcd1234'

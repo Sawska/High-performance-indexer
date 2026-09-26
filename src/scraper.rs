@@ -1,22 +1,3 @@
-//! Periodic REST scrape of every Polymarket endpoint the venue clients cover.
-//!
-//! One cycle walks the whole graph in dependency order:
-//!
-//!   gamma /markets/keyset  -> markets + the token ids everything else needs
-//!   clob  /books /midpoints /spreads /prices /prices-history  -> per token
-//!   data  /v2/trades /holders                                 -> per market
-//!   data  /positions /activity /value, /user-pnl              -> per wallet
-//!
-//! Wallets are discovered from the trades and holders of this cycle, so the
-//! wallet stage has no input of its own. It is also the widest stage by far,
-//! which is why it is sliced: each cycle takes one rotating slice of the
-//! discovered wallets, and successive cycles cover the rest.
-//!
-//! No stage failure aborts the cycle and no cycle failure stops the loop -- a
-//! rate limit or a single bad market must not cost the other endpoints their
-//! scrape. Errors are collapsed to `String` at the call boundary so the whole
-//! future stays `Send`.
-
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
@@ -38,7 +19,6 @@ use crate::venues::polymarket::user_pnl::UserPnlApi;
 
 type Res<T> = Result<T, String>;
 
-/// `eprintln!` that also counts the error against the current stage.
 macro_rules! warn {
     ($($arg:tt)*) => {{
         let msg = format!($($arg)*);
@@ -52,32 +32,20 @@ fn err<E: std::fmt::Display>(e: E) -> String {
 }
 
 pub struct Config {
-    /// Time between the start of one cycle and the start of the next. A cycle
-    /// that overruns it starts the next one immediately.
     pub interval: Duration,
-    /// Page size for the gamma keyset walk.
     pub market_page_limit: i32,
-    /// Stop the market walk after this many markets. 0 = no cap.
     pub max_markets: usize,
-    /// Tokens per /books, /midpoints, /spreads, /prices request.
     pub token_chunk: usize,
-    /// In-flight requests per stage.
     pub concurrency: usize,
-    /// Markets to scrape trades and holders for, per cycle. 0 = no cap.
     pub max_markets_deep: usize,
-    /// Pages of /v2/trades to follow per market.
     pub max_trade_pages: usize,
-    /// Wallets to scrape per cycle; the rest wait for a later cycle.
     pub wallets_per_cycle: usize,
     pub holders_limit: i32,
     pub positions_limit: i32,
     pub activity_limit: i32,
-    /// /prices-history window and /user-pnl window.
     pub history_interval: String,
     pub pnl_interval: String,
     pub pnl_fidelity: String,
-    /// Include closed and archived markets in the per-market and per-token
-    /// stages. They never change again, so the default is to skip them.
     pub include_closed: bool,
 }
 
@@ -151,13 +119,11 @@ impl Apis {
     }
 }
 
-/// What the market stage hands to the stages after it.
 struct MarketRef {
     condition_id: String,
     token_ids: Vec<String>,
 }
 
-/// `clobTokenIds` arrives as a JSON array inside a string.
 fn parse_token_ids(raw: Option<&str>) -> Vec<String> {
     raw.and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
         .unwrap_or_default()
@@ -193,7 +159,6 @@ fn profile_from_trade(t: &Trade) -> Profile {
     }
 }
 
-/// Runs cycles forever. Never returns.
 pub async fn run(pool: PgPool, cfg: Config) {
     let apis = Apis::new();
     let mut cycle_no: u64 = 0;
@@ -220,7 +185,6 @@ pub async fn run(pool: PgPool, cfg: Config) {
 async fn cycle(pool: &PgPool, cfg: &Config, apis: &Apis, cycle_no: u64) -> Res<()> {
     let scraped_at = Utc::now();
 
-    // Only this stage is fatal to the cycle: every later stage needs its ids.
     let markets = scrape_markets(pool, cfg, apis, scraped_at).await?;
 
     let tokens: Vec<String> = markets
@@ -277,8 +241,6 @@ async fn cycle(pool: &PgPool, cfg: &Config, apis: &Apis, cycle_no: u64) -> Res<(
     Ok(())
 }
 
-/// One `size`-wide window over `items`, advancing by one window per cycle so
-/// repeated cycles eventually cover everything.
 fn rotating_slice<T>(items: &[T], size: usize, cycle_no: u64) -> &[T] {
     if size == 0 || items.len() <= size {
         return items;
@@ -310,8 +272,6 @@ async fn scrape_markets(
             break;
         }
 
-        // Write each page as it lands: a later page failing must not throw
-        // away the pages already fetched.
         rest_writer::upsert_markets(pool, &page.markets, scraped_at)
             .await
             .map_err(err)?;
@@ -338,7 +298,6 @@ async fn scrape_markets(
             break;
         }
 
-        // A repeated cursor would page forever.
         match page.next_cursor {
             Some(next) if Some(&next) != cursor.as_ref() => cursor = Some(next),
             _ => break,
@@ -380,7 +339,6 @@ async fn scrape_books(
         .await;
 }
 
-/// /midpoints, /spreads and /prices for both sides, all landing in `quotes`.
 async fn scrape_quotes(pool: &PgPool, cfg: &Config, apis: &Apis, tokens: &[String]) {
     let chunks: Vec<&[String]> = tokens.chunks(cfg.token_chunk.max(1)).collect();
 

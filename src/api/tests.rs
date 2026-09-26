@@ -1,13 +1,3 @@
-//! End-to-end tests of the HTTP API over a real Postgres.
-//!
-//! Fixtures go in through the same writers the scraper uses, parsed from the
-//! same JSON shapes the venue APIs return, and come back out through the
-//! router exactly as the UI calls it. Each test gets its own fresh database
-//! from `#[sqlx::test]`, created on the server `DATABASE_URL` points at; the
-//! role needs CREATEDB:
-//!
-//!   DATABASE_URL=postgres://indexer:indexer@localhost:5432/indexer cargo test
-
 use std::path::Path;
 use std::time::Duration as StdDuration;
 
@@ -26,9 +16,6 @@ use crate::venues::polymarket::types::{
     Trade, UserPnlPoint, UserValue,
 };
 
-// ------------------------------------------------------------------ client
-
-/// Drives the router in-process and keeps the session cookie like a browser.
 struct Client {
     app: Router,
     cookie: Option<String>,
@@ -115,8 +102,6 @@ fn close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-9
 }
 
-// ---------------------------------------------------------------- fixtures
-
 const ALICE: &str = "0xaaa";
 const BOB: &str = "0xbbb";
 const CAROL: &str = "0xccc";
@@ -125,8 +110,6 @@ fn parse<T: serde::de::DeserializeOwned>(v: Value) -> T {
     serde_json::from_value(v).unwrap()
 }
 
-/// Two live markets (101 rain, 102 btc), one closed (103), three profiles,
-/// and something in every table the API reads. Relative to `now`.
 async fn seed(pool: &PgPool, now: DateTime<Utc>) {
     let secs = |d: Duration| (now - d).timestamp();
     let millis = |d: Duration| (now - d).timestamp_millis().to_string();
@@ -169,8 +152,6 @@ async fn seed(pool: &PgPool, now: DateTime<Utc>) {
     ]));
     rest_writer::upsert_profiles(pool, &profiles, now).await.unwrap();
 
-    // tok-yes has an older snapshot that must be ignored, and a newer one
-    // twelve levels deep that the API must cut to ten a side.
     let level = |p: f64| json!({ "price": format!("{p:.2}"), "size": "100" });
     let books: Vec<OrderBook> = parse(json!([
         {
@@ -200,7 +181,6 @@ async fn seed(pool: &PgPool, now: DateTime<Utc>) {
         side: side.map(Into::into),
         value,
     };
-    // Hours apart, so each lands in its own hourly spread bucket.
     rest_writer::insert_quotes(pool, &[q("tok-yes", "spread", None, 0.9)], now - Duration::days(40))
         .await
         .unwrap();
@@ -298,7 +278,6 @@ async fn seed(pool: &PgPool, now: DateTime<Utc>) {
     let value = |v: f64| UserValue { user: ALICE.into(), value: v };
     rest_writer::insert_user_values(pool, &[value(100.0)], None, now - Duration::days(1)).await.unwrap();
     rest_writer::insert_user_values(pool, &[value(150.0)], None, now).await.unwrap();
-    // A per-market value is not the portfolio and must not be read as one.
     rest_writer::insert_user_values(pool, &[value(999.0)], Some("0xc1"), now + Duration::seconds(1))
         .await
         .unwrap();
@@ -315,8 +294,6 @@ async fn seed(pool: &PgPool, now: DateTime<Utc>) {
     seed_websocket(pool, &millis(Duration::seconds(30))).await;
 }
 
-/// Pushes market-channel events through the websocket writer and waits for
-/// its batch to land.
 async fn seed_websocket(pool: &PgPool, ts: &str) {
     let events: Vec<MarketEvent> = parse(json!([
         { "event_type": "last_trade_price", "market": "0xc1", "asset_id": "tok-yes", "price": "0.62",
@@ -355,8 +332,6 @@ async fn seeded(pool: PgPool) -> Client {
     seed(&pool, Utc::now()).await;
     c
 }
-
-// -------------------------------------------------------------------- auth
 
 #[sqlx::test(migrations = false)]
 async fn schema_applies_twice(pool: PgPool) {
@@ -397,7 +372,6 @@ async fn auth_register_login_logout(pool: PgPool) {
     let (status, _) = c.request("GET", "/api/auth/me", None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 
-    // The old token is dead server-side too, not just forgotten by the browser.
     c.cookie = Some(token);
     let (status, _) = c.request("GET", "/api/overview", None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
@@ -452,8 +426,6 @@ async fn expired_sessions_are_rejected(pool: PgPool) {
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
-// ------------------------------------------------------------------ status
-
 #[sqlx::test(migrations = false)]
 async fn status_lists_every_table(pool: PgPool) {
     let mut c = Client::signed_in(&pool).await;
@@ -466,8 +438,6 @@ async fn status_lists_every_table(pool: PgPool) {
     assert!(body["live"]["stages"].is_array());
     assert!(body["now"].is_string());
 }
-
-// ---------------------------------------------------------------- overview
 
 #[sqlx::test(migrations = false)]
 async fn overview_totals_and_lists(pool: PgPool) {
@@ -487,8 +457,6 @@ async fn overview_totals_and_lists(pool: PgPool) {
     assert_eq!(ids(&body["recent_trades"], "transaction_hash"), ["0xt1", "0xt2", "0xt3", "0xt4"]);
     assert_eq!(body["recent_trades"][0]["name"], "alice", "trades join the profile");
 }
-
-// ----------------------------------------------------------------- markets
 
 #[sqlx::test(migrations = false)]
 async fn markets_filter_sort_search_and_page(pool: PgPool) {
@@ -525,7 +493,6 @@ async fn markets_filter_sort_search_and_page(pool: PgPool) {
     }
     assert_eq!(c.get("/api/markets?limit=1").await["total"], 2, "total ignores paging");
 
-    // Search text is bound, never spliced into the SQL.
     let page = c.get("/api/markets?q=%27%3B%20DROP%20TABLE%20markets%3B%20--").await;
     assert_eq!(page["total"], 0);
     assert_eq!(c.get("/api/markets?status=all").await["total"], 3);
@@ -564,7 +531,6 @@ async fn market_detail_returns_every_section(pool: PgPool) {
     assert_eq!(spread_of("tok-yes"), [0.10, 0.02], "hourly buckets, 40-day-old one dropped");
     assert_eq!(spread_of("tok-no"), [0.02]);
 
-    // Only the newest value per (token, kind, side).
     let quote = |token: &str, kind: &str, side: Option<&str>| -> Vec<f64> {
         d["quotes"].as_array().unwrap().iter()
             .filter(|q| q["asset_id"] == token && q["kind"] == kind && q["side"] == json!(side))
@@ -633,8 +599,6 @@ async fn market_detail_is_empty_not_broken_without_scrape_data(pool: PgPool) {
     assert!(d["info"]["description"].is_null());
 }
 
-// ----------------------------------------------------------------- traders
-
 #[sqlx::test(migrations = false)]
 async fn traders_sort_and_search(pool: PgPool) {
     let mut c = seeded(pool).await;
@@ -702,8 +666,6 @@ async fn trader_detail_returns_every_section(pool: PgPool) {
     let (status, body) = c.request("GET", "/api/traders/0xnobody", None).await;
     assert_eq!((status, &body["error"]), (StatusCode::NOT_FOUND, &json!("trader not found")));
 }
-
-// ------------------------------------------------------ trades and activity
 
 #[sqlx::test(migrations = false)]
 async fn trades_filters_and_paging(pool: PgPool) {

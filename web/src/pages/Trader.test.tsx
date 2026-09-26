@@ -17,9 +17,7 @@ const detail: TraderDetail = traderDetail({
     { ts: '2026-09-25T12:00:00Z', value: 3_400 },
   ],
   positions: [
-    // Won and not redeemed yet.
     position({ asset: 'a1', initial_value: 80, current_value: 120, cash_pnl: 40, percent_pnl: 50, realized_pnl: 25, redeemable: true }),
-    // Lost: redeemable for nothing, market not scraped.
     position({
       asset: 'a2',
       condition_id: '0x5n0w',
@@ -34,7 +32,6 @@ const detail: TraderDetail = traderDetail({
       realized_pnl: -10,
       redeemable: true,
     }),
-    // Still open, holding both sides.
     position({ asset: 'a3', question: 'Will the Thames freeze?', mergeable: true }),
   ],
   activity: [
@@ -119,7 +116,6 @@ describe('Trader page', () => {
     expect(screen.getByRole('columnheader', { name: 'Cost' })).toBeInTheDocument()
     const table = tableWithHeader('Realized')
     const rows = bodyRows(table)
-    // Market, Outcome, Shares, Avg, Now, Cost, Value, Unrealized, Realized, Ends
     expect(rows[0]).toEqual([
       'Will it rain in London tomorrow?redeemable',
       'Yes',
@@ -168,7 +164,6 @@ describe('Trader page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'redeem' }))
     const redeems = activityRows()
     expect(redeems).toHaveLength(1)
-    // When, Type, Market, Outcome, Price, Shares, USDC
     expect(redeems[0].slice(1)).toEqual(['REDEEM', 'Snow market', '—', '—', '100', '$120'])
 
     await userEvent.click(screen.getByRole('button', { name: 'trade' }))

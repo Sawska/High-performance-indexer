@@ -5,7 +5,6 @@ import { LineChart, type Series } from './LineChart'
 const series: Series[] = [{ name: 'Yes', points: [{ t: 0, v: 0.2 }, { t: 86_400_000, v: 0.4 }] }]
 const cents = (v: number) => `${Math.round(v * 100)}¢`
 
-/** Records what ResizeObserver watches and lets a test report a new width. */
 function stubResizeObserver() {
   const watched: Element[] = []
   let report: ResizeObserverCallback = () => {}

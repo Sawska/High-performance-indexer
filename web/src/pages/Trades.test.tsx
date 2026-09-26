@@ -28,7 +28,6 @@ describe('Trades page', () => {
     const { fetchMock } = renderTrades(`/trades?market=${CONDITION}`)
     expect(await screen.findByText('Market: Will it rain in London tomorrow?')).toBeInTheDocument()
     expect(lastQuery(fetchMock, '/api/trades')).toEqual({ market: CONDITION, limit: '100', offset: '0' })
-    // Every row is the same market, so the column is dropped.
     expect(screen.queryByRole('columnheader', { name: 'Market' })).toBeNull()
   })
 

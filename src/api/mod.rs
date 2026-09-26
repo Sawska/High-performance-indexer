@@ -1,13 +1,3 @@
-//! HTTP API for the web UI, plus the built UI itself.
-//!
-//!   /api/auth/*         register, login, logout, me          -- public
-//!   /api/status         live scrape progress + table counts  -- signed in
-//!   /api/overview, /api/markets[/{id}], /api/traders[/{wallet}], /api/trades,
-//!   /api/activity       Polymarket statistics                -- signed in
-//!   everything else     files from `web_dir`, `index.html` as the SPA fallback
-//!
-//! Every handler reads Postgres directly; the scraper is the only writer.
-
 mod auth;
 mod polymarket;
 #[cfg(test)]
@@ -29,8 +19,6 @@ use tower_http::services::{ServeDir, ServeFile};
 
 use crate::stats;
 
-/// An error a handler returns. Server-side causes are logged and hidden from
-/// the client; client-side ones carry their message back as `{"error": ...}`.
 pub struct ApiError {
     status: StatusCode,
     message: String,
@@ -78,8 +66,6 @@ struct Status {
 }
 
 async fn status(State(pool): State<PgPool>) -> ApiResult<Status> {
-    // The stats view is an estimate that lags commits by a moment, but it is
-    // free; exact count(*) over the history tables would not be.
     let tables = sqlx::query_as::<_, TableCount>(
         "SELECT relname::text AS name, n_live_tup AS rows
             FROM pg_stat_user_tables
@@ -95,7 +81,6 @@ async fn status(State(pool): State<PgPool>) -> ApiResult<Status> {
     }))
 }
 
-/// Every route, API and UI, over one pool.
 pub fn router(pool: PgPool, web_dir: &Path) -> Router {
     let signed_in = Router::new()
         .route("/api/status", get(status))
@@ -117,7 +102,6 @@ pub fn router(pool: PgPool, web_dir: &Path) -> Router {
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/me", get(auth::me));
 
-    // An unknown /api path must answer 404, not the SPA's index.html.
     let api_404 = Router::new().route(
         "/api/{*rest}",
         get(|| async { ApiError::new(StatusCode::NOT_FOUND, "no such endpoint") }),

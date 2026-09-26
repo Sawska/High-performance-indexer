@@ -26,8 +26,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let scrape = scraper::run(pool.clone(), scraper::Config::from_env());
 
-    // The websocket needs an explicit asset list; without one the REST scrape
-    // is the whole job. Both share the task so neither needs to be `Send`.
     let Ok(assets) = std::env::var("ASSET_IDS") else {
         scrape.await;
         return Ok(());

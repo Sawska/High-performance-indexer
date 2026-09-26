@@ -1,7 +1,4 @@
-//! Read-only Polymarket statistics over what the scraper has stored.
-//!
-//! Money columns are NUMERIC in Postgres and cast to float8 here: the UI only
-//! displays them, so exactness past a cent is not worth a decimal type.
+
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -18,8 +15,6 @@ fn page_limit(limit: Option<i64>) -> i64 {
     limit.unwrap_or(50).clamp(1, 200)
 }
 
-/// `outcomes`, `outcomePrices` and `clobTokenIds` arrive as JSON arrays
-/// inside strings.
 fn json_list(raw: Option<&str>) -> Vec<String> {
     raw.and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
         .unwrap_or_default()
@@ -75,7 +70,6 @@ pub struct Market {
     token_ids: Vec<String>,
     scraped_at: DateTime<Utc>,
     icon: Option<String>,
-    /// Gamma's 24h move of the first outcome's price, in price units.
     one_day_change: Option<f64>,
 }
 
@@ -186,8 +180,6 @@ pub async fn overview(State(pool): State<PgPool>) -> ApiResult<Overview> {
     }))
 }
 
-// ----------------------------------------------------------------- markets
-
 #[derive(Deserialize)]
 pub struct MarketsQuery {
     q: Option<String>,
@@ -207,7 +199,6 @@ pub async fn markets(
     State(pool): State<PgPool>,
     Query(q): Query<MarketsQuery>,
 ) -> ApiResult<Page<Market>> {
-    // Only fixed fragments are ever spliced into the SQL; user text is bound.
     let status = match q.status.as_deref() {
         Some("closed") => format!("NOT ({LIVE})"),
         Some("all") => "true".to_string(),
@@ -270,7 +261,6 @@ struct HolderRow {
     amount: f64,
 }
 
-/// Gamma fields that only the market page shows, read out of `raw`.
 #[derive(Serialize, sqlx::FromRow)]
 struct MarketInfo {
     description: Option<String>,
@@ -285,7 +275,6 @@ struct MarketInfo {
     one_month_change: Option<f64>,
 }
 
-/// One /midpoints, /spreads or /prices value; `side` is set for prices only.
 #[derive(Serialize, sqlx::FromRow)]
 struct QuoteRow {
     asset_id: String,
@@ -306,7 +295,6 @@ struct BookMeta {
     last_trade_price: Option<f64>,
 }
 
-/// A fill from the websocket market channel (`trades`, not `data_trades`).
 #[derive(Serialize, sqlx::FromRow)]
 struct WsTrade {
     asset_id: String,
@@ -352,8 +340,6 @@ pub struct MarketDetail {
     tick_changes: Vec<TickChange>,
 }
 
-/// Accepts either the gamma market id or the condition id, so trade rows
-/// (which only know the condition) can link here.
 pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiResult<MarketDetail> {
     let market: Market = sqlx::query_as::<_, MarketRow>(&format!(
         "SELECT {MARKET_COLS} FROM markets WHERE id = $1 OR condition_id = $1 LIMIT 1"
@@ -390,7 +376,6 @@ pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiRe
     .fetch_all(&pool)
     .await?;
 
-    // A row per token per cycle is more than a chart can show; hourly means.
     let spread_history = sqlx::query_as::<_, PricePoint>(
         "SELECT asset_id AS token, date_trunc('hour', captured_at) AS ts,
                 avg(value)::float8 AS price
@@ -404,9 +389,6 @@ pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiRe
     .fetch_all(&pool)
     .await?;
 
-    // Each chunk of quotes shares one capture time, so a token's newest two
-    // rows per kind hold both price sides; the index serves the LIMIT and the
-    // dedupe below keeps the newest per side.
     let mut quotes = sqlx::query_as::<_, QuoteRow>(
         "SELECT q.asset_id, q.kind, q.side, q.value::float8 AS value, q.captured_at
             FROM unnest($1::text[]) AS t(asset_id)
@@ -437,7 +419,6 @@ pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiRe
     .fetch_all(&pool)
     .await?;
 
-    // Top ten levels a side from each token's newest snapshot.
     let book = sqlx::query_as::<_, BookLevel>(
         "WITH latest AS (
             SELECT DISTINCT ON (asset_id) asset_id, ts, hash
@@ -495,7 +476,6 @@ pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiRe
     .fetch_all(&pool)
     .await?;
 
-    // The websocket tables fill only for the tokens in ASSET_IDS.
     let ws_trades = sqlx::query_as::<_, WsTrade>(
         "SELECT asset_id, ts, price::float8 AS price, size::float8 AS size, side,
                 fee_rate_bps::float8 AS fee_rate_bps, transaction_hash
@@ -548,8 +528,6 @@ pub async fn market(State(pool): State<PgPool>, Path(id): Path<String>) -> ApiRe
     }))
 }
 
-// ----------------------------------------------------------------- traders
-
 #[derive(Deserialize)]
 pub struct TradersQuery {
     q: Option<String>,
@@ -570,7 +548,6 @@ pub struct TraderRow {
     trades: i64,
 }
 
-/// Latest pnl and portfolio value per wallet, and volume over stored trades.
 const TRADER_SELECT: &str = "WITH pnl AS (
         SELECT DISTINCT ON (proxy_wallet) proxy_wallet, pnl
             FROM user_pnl ORDER BY proxy_wallet, ts DESC
@@ -644,7 +621,6 @@ struct ProfileInfo {
 struct PositionRow {
     asset: String,
     condition_id: String,
-    /// Whether the market is stored, i.e. whether its page exists.
     has_market: bool,
     question: Option<String>,
     outcome: Option<String>,
@@ -710,7 +686,6 @@ pub async fn trader(
             .fetch_one(&pool)
             .await?;
 
-    // market = '' is the whole-portfolio /value; per-market rows are not scraped.
     let values = sqlx::query_as::<_, ValuePoint>(
         "SELECT captured_at AS ts, value::float8 AS value
             FROM user_values
@@ -773,13 +748,10 @@ pub async fn trader(
     }))
 }
 
-// ------------------------------------------------------------------ trades
-
 #[derive(Deserialize)]
 pub struct TradesQuery {
     side: Option<String>,
     min_usd: Option<f64>,
-    /// Condition id.
     market: Option<String>,
     wallet: Option<String>,
     limit: Option<i64>,
@@ -810,11 +782,8 @@ pub async fn trades(
     Ok(Json(rows))
 }
 
-// ---------------------------------------------------------------- activity
-
 #[derive(Deserialize)]
 pub struct ActivityQuery {
-    /// TRADE, SPLIT, MERGE, REDEEM, REWARD, CONVERSION, ...
     #[serde(rename = "type")]
     kind: Option<String>,
     wallet: Option<String>,
@@ -839,7 +808,6 @@ pub struct ActivityFeedRow {
     transaction_hash: String,
 }
 
-/// /activity across every scraped wallet, newest first.
 pub async fn activity(
     State(pool): State<PgPool>,
     Query(q): Query<ActivityQuery>,

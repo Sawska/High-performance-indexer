@@ -1,24 +1,14 @@
-//! Live progress of the scrape loop.
-//!
-//! The scraper reports into one process-wide snapshot instead of threading a
-//! handle through every stage: it is observability only, nothing reads it back
-//! to make decisions, so a global keeps the stage signatures untouched.
-//!
-//! Served to the UI by `GET /api/status` (src/api/mod.rs).
-
 use std::sync::{LazyLock, Mutex};
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-/// How many recent error lines to keep for the UI.
 const ERROR_TAIL: usize = 20;
 
 #[derive(Clone, Serialize)]
 pub struct Stage {
     pub name: &'static str,
     pub done: u64,
-    /// 0 when the stage cannot know its size up front (the market walk).
     pub total: u64,
     pub errors: u64,
     pub started_at: DateTime<Utc>,
@@ -39,13 +29,11 @@ pub struct Snapshot {
     pub cycle_started_at: Option<DateTime<Utc>>,
     pub last_cycle_ms: Option<u64>,
     pub last_cycle_finished_at: Option<DateTime<Utc>>,
-    /// Counts of what the current cycle found.
     pub markets: u64,
     pub live_markets: u64,
     pub tokens: u64,
     pub wallets_discovered: u64,
     pub wallets_this_cycle: u64,
-    /// Stages of the current cycle, in the order they started.
     pub stages: Vec<Stage>,
     pub errors_total: u64,
     pub recent_errors: Vec<ErrorLine>,
@@ -71,7 +59,6 @@ static SNAPSHOT: LazyLock<Mutex<Snapshot>> = LazyLock::new(|| {
 });
 
 fn with<R>(f: impl FnOnce(&mut Snapshot) -> R) -> R {
-    // A panic elsewhere while holding the lock must not take the stats down too.
     let mut s = SNAPSHOT.lock().unwrap_or_else(|e| e.into_inner());
     f(&mut s)
 }
@@ -120,7 +107,6 @@ pub fn stage_start(name: &'static str, total: usize) {
     });
 }
 
-/// One unit of the current stage finished, successfully or not.
 pub fn tick() {
     with(|s| {
         if let Some(stage) = s.stages.last_mut() {
@@ -157,7 +143,6 @@ pub fn snapshot() -> Snapshot {
 mod unit {
     use super::*;
 
-    // The snapshot is process-global, so the whole lifecycle is one test.
     #[test]
     fn cycle_lifecycle_is_reflected_in_the_snapshot() {
         cycle_start(7);

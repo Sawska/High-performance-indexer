@@ -84,7 +84,6 @@ describe('api', () => {
   })
 
   it('does not dispatch the unauthorized event on 401 from /api/auth/*', async () => {
-    // A Response body reads once; hand each call a fresh one.
     fetchMock.mockImplementation(async () => new Response('{"error":"bad credentials"}', { status: 401 }))
     await expect(api('/api/auth/me')).rejects.toMatchObject({ status: 401 })
     await expect(api('/api/auth/login', { method: 'POST', body: {} })).rejects.toMatchObject({

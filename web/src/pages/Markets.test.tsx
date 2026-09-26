@@ -46,7 +46,6 @@ describe('Markets page', () => {
 
     const sortSelect = option.closest('select')!
     await userEvent.selectOptions(sortSelect, 'movers')
-    // Changing a filter goes back to the first page.
     await waitFor(() => expect(lastQuery(fetchMock, '/api/markets')).toMatchObject({ sort: 'movers', offset: '0' }))
     expect(screen.getByTestId('location')).toHaveTextContent('/markets?sort=movers')
   })
@@ -54,7 +53,6 @@ describe('Markets page', () => {
   it('renders the 24h move as signed, colored cents', async () => {
     await renderMarkets()
     const table = tableWithHeader('24h')
-    // Market, Outcomes, Bid / Ask, 24h, Volume, Liquidity, Ends
     expect(bodyRows(table).map((r) => r[3])).toEqual(['+3¢', '−0.5¢', '—'])
     const cells = [...table.querySelectorAll('tbody tr')].map((tr) => tr.querySelectorAll('td')[3].firstElementChild!)
     expect(cells[0]).toHaveClass('pos')
