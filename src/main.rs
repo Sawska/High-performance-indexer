@@ -1,4 +1,5 @@
 mod api;
+mod chain;
 mod db;
 mod scraper;
 mod stats;
@@ -23,6 +24,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             eprintln!("api: {e}");
         }
     });
+
+    // The on-chain indexer is opt-in: it needs an RPC endpoint, and without
+    // CHAIN_ENABLED the process behaves exactly as it did before.
+    if chain::Config::enabled() {
+        let chain_pool = pool.clone();
+        tokio::spawn(async move {
+            chain::run(chain_pool, chain::Config::from_env()).await;
+        });
+    }
 
     let scrape = scraper::run(pool.clone(), scraper::Config::from_env());
 

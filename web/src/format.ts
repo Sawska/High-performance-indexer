@@ -22,6 +22,8 @@ export function centsDelta(d: number | null | undefined): string {
 }
 
 export const txUrl = (hash: string) => `https://polygonscan.com/tx/${hash}`
+export const addressUrl = (a: string) => `https://polygonscan.com/address/${a}`
+export const blockUrl = (n: number) => `https://polygonscan.com/block/${n}`
 
 export const shares = (n: number | null | undefined) =>
   n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 0 })

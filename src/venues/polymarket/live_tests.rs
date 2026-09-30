@@ -1,9 +1,3 @@
-//! Calls the real Polymarket endpoints and checks the responses still parse
-//! into our types. Ignored by default: they need the network and their data
-//! changes under them. Run with
-//!
-//!   cargo test live_ -- --ignored --test-threads=1
-
 use std::time::Duration;
 
 use tokio::sync::mpsc;
@@ -20,7 +14,6 @@ struct Sample {
     tokens: Vec<String>,
 }
 
-/// The most liquid live market on gamma's first page.
 async fn sample() -> Sample {
     let page = GammaApi::new().list_markets(50, None).await.unwrap();
     assert!(!page.markets.is_empty(), "gamma returned no markets");
@@ -38,7 +31,6 @@ async fn sample() -> Sample {
     }
 }
 
-/// A wallet that traded the sample market.
 async fn trader(s: &Sample) -> String {
     let query = TradesQuery {
         condition_id: Some(&s.condition_id),
@@ -64,7 +56,6 @@ async fn live_gamma_markets_keyset_pages() {
 #[tokio::test]
 #[ignore]
 async fn live_gamma_public_search_profiles() {
-    // Parsing is the point; an empty result is fine.
     GammaApi::new().search_profiles("trader", 3).await.unwrap();
 }
 
@@ -171,6 +162,6 @@ async fn live_websocket_sends_a_book_on_subscribe() {
     match first {
         Some(MarketEvent::Book(b)) => assert!(s.tokens.contains(&b.asset_id)),
         Some(MarketEvent::Unknow) | None => panic!("no decodable event"),
-        Some(_) => {} // a trade or price change beat the snapshot; decoding is what matters
+        Some(_) => {} 
     }
 }

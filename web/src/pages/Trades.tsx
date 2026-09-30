@@ -16,7 +16,6 @@ export function Trades() {
   const offset = Number(params.get('offset') ?? 0)
   const now = useNow()
 
-  // Only the first page follows the feed; older pages stay put while read.
   const { data, error, loading } = useApi<Trade[]>(
     `/api/trades${qs({ side, min_usd: minUsd, market, wallet, limit: LIMIT, offset })}`,
     offset === 0 ? 15_000 : undefined,
@@ -30,7 +29,6 @@ export function Trades() {
     setParams(next, { replace: true })
   }
 
-  // Filters set by a link carry an id; the rows name what it is.
   const marketTitle = data?.[0]?.title ?? market.slice(0, 10) + '…'
   const walletName = data?.[0] && (data[0].name || data[0].pseudonym)
 

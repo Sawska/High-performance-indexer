@@ -2,6 +2,7 @@ pub mod writer;
 pub mod reader;
 pub mod clickhouse;
 pub mod rest_writer;
+pub mod chain_writer;
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 

@@ -1,4 +1,18 @@
-import type { ActivityFeedRow, Activity, Market, MarketDetail, Trade, TraderDetail } from '../api'
+import type {
+  ActivityFeedRow,
+  Activity,
+  ChainCollateralTransfer,
+  ChainCondition,
+  ChainFill,
+  ChainPosition,
+  ChainRedemption,
+  ChainStatus,
+  ChainTokenTransfer,
+  Market,
+  MarketDetail,
+  Trade,
+  TraderDetail,
+} from '../api'
 
 export const WALLET = '0xabcdef0123456789abcdef0123456789abcd1234'
 export const CONDITION = '0xc0nd1710n'
@@ -139,6 +153,130 @@ export function traderDetail(over: Partial<TraderDetail> = {}): TraderDetail {
     values: [],
     positions: [],
     activity: [],
+    ...over,
+  }
+}
+
+// ── on-chain ────────────────────────────────────────────────────────────────
+
+export const MAKER = '0x1111111111111111111111111111111111111111'
+export const TAKER = '0x2222222222222222222222222222222222222222'
+export const ORDER_HASH = '0x0rder0000000000000000000000000000000000000000000000000000000001'
+
+export function chainStatus(over: Partial<ChainStatus> = {}): ChainStatus {
+  return {
+    enabled: true,
+    head: 94_641_500,
+    cursor: 94_641_470,
+    lag: 30,
+    last_range: [94_641_400, 94_641_470],
+    ranges_done: 12,
+    rows_written: 66_923,
+    reorgs: 0,
+    errors: 0,
+    last_error: null,
+    updated_at: '2026-09-25T11:59:00Z',
+    stored_cursor: 94_641_470,
+    stored_cursor_at: '2026-09-25T11:59:00Z',
+    tables: [
+      { name: 'chain_order_fills', rows: 37_151 },
+      { name: 'chain_token_transfers', rows: 78_418 },
+    ],
+    ...over,
+  }
+}
+
+const logRef = {
+  transaction_hash: TX,
+  log_index: 12,
+  block_number: 94_641_470,
+  block_time: '2026-09-25T11:00:00Z',
+}
+
+export function chainFill(over: Partial<ChainFill> = {}): ChainFill {
+  return {
+    ...logRef,
+    exchange: '0xe111180000d2663c0091e4f400237545b87b996b',
+    exchange_version: 2,
+    neg_risk: false,
+    event: 'order_filled',
+    order_hash: ORDER_HASH,
+    maker: MAKER,
+    taker: TAKER,
+    side: 'BUY',
+    token_id: TOKEN_YES,
+    price: 0.62,
+    size: 100,
+    fee: 0.01,
+    condition_id: CONDITION,
+    question: 'Will it rain in London tomorrow?',
+    slug: 'will-it-rain-in-london-tomorrow',
+    ...over,
+  }
+}
+
+export function chainPosition(over: Partial<ChainPosition> = {}): ChainPosition {
+  return {
+    ...logRef,
+    kind: 'split',
+    stakeholder: MAKER,
+    condition_id: CONDITION,
+    collateral_token: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+    partition_ids: ['1', '2'],
+    amount: 100,
+    question: 'Will it rain in London tomorrow?',
+    ...over,
+  }
+}
+
+export function chainRedemption(over: Partial<ChainRedemption> = {}): ChainRedemption {
+  return {
+    ...logRef,
+    redeemer: MAKER,
+    condition_id: CONDITION,
+    index_sets: ['1', '2'],
+    payout: 250,
+    question: 'Will it rain in London tomorrow?',
+    ...over,
+  }
+}
+
+export function chainCondition(over: Partial<ChainCondition> = {}): ChainCondition {
+  return {
+    condition_id: CONDITION,
+    oracle: '0x65070be91477460d8a7aeeb94ef92fe056c2f2a7',
+    question_id: '0x44d8e6445aa8fd2086f324ac23c9650112f9cc9edd8c33599515a9cd2df56ea8',
+    outcome_slot_count: 2,
+    prepared_at: '2026-09-01T10:00:00Z',
+    resolved_at: '2026-09-25T11:00:00Z',
+    payout_numerators: ['1', '0'],
+    question: 'Will it rain in London tomorrow?',
+    slug: 'will-it-rain-in-london-tomorrow',
+    ...over,
+  }
+}
+
+export function chainTransfer(over: Partial<ChainTokenTransfer> = {}): ChainTokenTransfer {
+  return {
+    ...logRef,
+    item_index: 0,
+    operator: MAKER,
+    from_address: MAKER,
+    to_address: TAKER,
+    token_id: TOKEN_YES,
+    amount: 100,
+    ...over,
+  }
+}
+
+export function chainCollateral(over: Partial<ChainCollateralTransfer> = {}): ChainCollateralTransfer {
+  return {
+    ...logRef,
+    token: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+    symbol: 'USDC.e',
+    from_address: MAKER,
+    to_address: TAKER,
+    amount: 12.16,
     ...over,
   }
 }

@@ -51,6 +51,7 @@ describe('Layout', () => {
       ['Traders', '/traders'],
       ['Trades', '/trades'],
       ['Activity', '/activity'],
+      ['On-chain', '/chain'],
       ['Indexer', '/indexer'],
     ])
     expect(screen.getByRole('link', { name: 'Markets' })).toHaveAttribute('aria-current', 'page')

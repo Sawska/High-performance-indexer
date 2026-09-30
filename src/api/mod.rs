@@ -1,4 +1,5 @@
 mod auth;
+mod chain;
 mod polymarket;
 #[cfg(test)]
 mod tests;
@@ -91,6 +92,13 @@ pub fn router(pool: PgPool, web_dir: &Path) -> Router {
         .route("/api/traders/{wallet}", get(polymarket::trader))
         .route("/api/trades", get(polymarket::trades))
         .route("/api/activity", get(polymarket::activity))
+        .route("/api/chain/status", get(chain::status))
+        .route("/api/chain/fills", get(chain::fills))
+        .route("/api/chain/positions", get(chain::positions))
+        .route("/api/chain/redemptions", get(chain::redemptions))
+        .route("/api/chain/conditions", get(chain::conditions))
+        .route("/api/chain/transfers", get(chain::transfers))
+        .route("/api/chain/collateral", get(chain::collateral))
         .route_layer(middleware::from_fn_with_state(
             pool.clone(),
             auth::require_user,

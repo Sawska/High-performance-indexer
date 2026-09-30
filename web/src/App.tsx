@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth'
 import { Activity } from './pages/Activity'
+import { Chain } from './pages/Chain'
 import { Layout } from './pages/Layout'
 import { Login } from './pages/Login'
 import { Market } from './pages/Market'
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="traders/:wallet" element={<Trader />} />
             <Route path="trades" element={<Trades />} />
             <Route path="activity" element={<Activity />} />
+            <Route path="chain" element={<Chain />} />
             <Route path="indexer" element={<Status />} />
             <Route path="*" element={<div className="empty">Page not found.</div>} />
           </Route>

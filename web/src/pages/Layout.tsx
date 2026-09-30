@@ -7,6 +7,7 @@ const NAV = [
   { to: '/traders', label: 'Traders' },
   { to: '/trades', label: 'Trades' },
   { to: '/activity', label: 'Activity' },
+  { to: '/chain', label: 'On-chain' },
   { to: '/indexer', label: 'Indexer' },
 ]
 

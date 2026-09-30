@@ -112,6 +112,60 @@ pub async fn upsert_markets(
     .bind(&volumes).bind(&liquidities).bind(&best_bids).bind(&best_asks).bind(&last_trades)
     .bind(&spreads).bind(&tick_sizes).bind(&min_sizes).bind(&raws).bind(&scraped)
     .execute(pool)
+    .await?;
+
+    upsert_market_tokens(pool, &uniq).await
+}
+
+/// Keep the token -> market mapping in step with the catalogue.
+///
+/// `clob_token_ids` arrives as a JSON array encoded *inside* a string, so it
+/// needs a second parse. Without this mapping the on-chain endpoints would have
+/// to match a token by `LIKE` against that string, which cannot use an index.
+async fn upsert_market_tokens(
+    pool: &PgPool,
+    markets: &[&ListMarkets],
+) -> Result<(), sqlx::Error> {
+    let mut tokens: Vec<String> = Vec::new();
+    let mut market_ids: Vec<String> = Vec::new();
+    let mut condition_ids: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    for m in markets {
+        let Some(raw) = m.clob_token_ids.as_deref() else {
+            continue;
+        };
+        let Ok(ids) = serde_json::from_str::<Vec<String>>(raw) else {
+            continue;
+        };
+        for id in ids {
+            // A token belongs to one market, but the same market can arrive
+            // twice in a page; ON CONFLICT cannot fix duplicates within a
+            // single statement, so they are dropped here.
+            if id.is_empty() || !seen.insert(id.clone()) {
+                continue;
+            }
+            tokens.push(id);
+            market_ids.push(m.id.clone());
+            condition_ids.push(m.condition_id.clone());
+        }
+    }
+
+    if tokens.is_empty() {
+        return Ok(());
+    }
+
+    sqlx::query(
+        "INSERT INTO market_tokens (token_id, market_id, condition_id)
+         SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[])
+         ON CONFLICT (token_id) DO UPDATE SET
+             market_id    = EXCLUDED.market_id,
+             condition_id = EXCLUDED.condition_id",
+    )
+    .bind(&tokens)
+    .bind(&market_ids)
+    .bind(&condition_ids)
+    .execute(pool)
     .await
     .map(|_| ())
 }

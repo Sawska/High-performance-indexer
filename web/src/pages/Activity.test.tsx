@@ -20,7 +20,6 @@ describe('Activity page', () => {
     const { fetchMock } = renderActivity(`/activity?type=REDEEM&wallet=${WALLET}`)
     expect(await screen.findByText('No activity matches.')).toBeInTheDocument()
     expect(lastQuery(fetchMock, '/api/activity')).toEqual({ type: 'REDEEM', wallet: WALLET, limit: '100', offset: '0' })
-    // No rows to take a name from, so the chip shows the short wallet.
     expect(screen.getByText('Trader: 0xabcd…1234')).toBeInTheDocument()
     expect(typeSelect()).toHaveValue('REDEEM')
     expect(screen.getByDisplayValue('redeem')).toBeInTheDocument()
@@ -61,7 +60,6 @@ describe('Activity page', () => {
     ])
     const table = await screen.findByRole('table')
     expect(tableWithHeader('Trader')).toBe(table)
-    // When, Trader, Type, Market, Outcome, Price, Shares, USDC
     expect(bodyRows(table).map((r) => r.slice(1))).toEqual([
       ['alice', 'BUY', 'Will it rain in London tomorrow?', 'Yes', '62¢', '100', '$62'],
       ['Brave-Otter', 'REDEEM', 'Will it rain in London tomorrow?', '—', '—', '100', '$120'],

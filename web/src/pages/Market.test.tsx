@@ -94,7 +94,6 @@ describe('Market page', () => {
     expect(screen.getByRole('heading', { name: /^CLOB quotes/ })).toHaveTextContent(/as of .+ ago$/)
     const rows = bodyRows(tableWithHeader('Midpoint'))
     expect(rows).toHaveLength(2)
-    // Outcome, Midpoint, Buy, Sell, Spread, Last trade, Tick, Min order, (Book as of)
     expect(rows[0].slice(0, 8)).toEqual(['Yes', '60¢', '61¢', '59¢', '2¢', '63¢', '0.01', '5'])
     expect(rows[0][8]).toMatch(/ago$/)
     expect(rows[1]).toEqual(['No', '40¢', '—', '—', '—', '—', '—', '—', '—'])
@@ -183,7 +182,6 @@ describe('Market page', () => {
     const ticks = screen.getByRole('button', { name: 'Tick size 1' })
     expect(fills).toHaveAttribute('aria-pressed', 'true')
 
-    // When, Outcome, Side, Price, Shares, Fee
     const fillRows = bodyRows(tableWithHeader('Fee')).map((r) => r.slice(1))
     expect(fillRows).toEqual([
       ['Yes', 'BUY', '62¢', '50', '30 bps'],

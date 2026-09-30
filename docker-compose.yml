@@ -55,6 +55,33 @@ services:
       SCRAPE_MAX_MARKETS_DEEP: "${SCRAPE_MAX_MARKETS_DEEP:-500}"
       SCRAPE_WALLETS_PER_CYCLE: "${SCRAPE_WALLETS_PER_CYCLE:-200}"
 
+      # ── on-chain (Polygon) indexer ──
+      # Off by default; set CHAIN_ENABLED=true to start following Polygon logs.
+      CHAIN_ENABLED: "${CHAIN_ENABLED:-false}"
+      CHAIN_RPC_URL: "${CHAIN_RPC_URL:-https://polygon-bor-rpc.publicnode.com}"
+
+      # 0 means "start CHAIN_INITIAL_LOOKBACK blocks behind the head". Set an
+      # explicit block to backfill; a stored cursor always takes precedence.
+      CHAIN_START_BLOCK: "${CHAIN_START_BLOCK:-0}"
+      CHAIN_INITIAL_LOOKBACK: "${CHAIN_INITIAL_LOOKBACK:-100000}"
+
+      # Tuned for a free public RPC: small log ranges, few requests in flight.
+      CHAIN_LOG_RANGE: "${CHAIN_LOG_RANGE:-1000}"
+      CHAIN_CONCURRENCY: "${CHAIN_CONCURRENCY:-2}"
+      CHAIN_CONFIRMATIONS: "${CHAIN_CONFIRMATIONS:-64}"
+      CHAIN_POLL_SECS: "${CHAIN_POLL_SECS:-5}"
+      CHAIN_MAX_RETRIES: "${CHAIN_MAX_RETRIES:-5}"
+      CHAIN_BACKOFF_MS: "${CHAIN_BACKOFF_MS:-500}"
+      CHAIN_BLOCK_BATCH: "${CHAIN_BLOCK_BATCH:-100}"
+      CHAIN_FETCH_BLOCK_TIMES: "${CHAIN_FETCH_BLOCK_TIMES:-true}"
+
+      # Feeds can be switched off individually; the ERC-1155 and collateral
+      # transfer feeds are by far the highest volume.
+      CHAIN_FEED_EXCHANGE: "${CHAIN_FEED_EXCHANGE:-true}"
+      CHAIN_FEED_CTF: "${CHAIN_FEED_CTF:-true}"
+      CHAIN_FEED_TOKENS: "${CHAIN_FEED_TOKENS:-true}"
+      CHAIN_FEED_COLLATERAL: "${CHAIN_FEED_COLLATERAL:-true}"
+
       CLICKHOUSE_URL: "${CLICKHOUSE_URL:-http://clickhouse:8123}"
       CLICKHOUSE_DB: "${CLICKHOUSE_DB:-indexer}"
       CLICKHOUSE_USER: "${CLICKHOUSE_USER:-indexer}"

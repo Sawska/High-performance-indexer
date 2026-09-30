@@ -42,8 +42,6 @@ export function LineChart({ series, height = 240, formatValue, yDomain }: Props)
     const t0 = Math.min(...all.map((p) => p.t))
     const t1 = Math.max(...all.map((p) => p.t))
     let [v0, v1] = yDomain ?? [Math.min(...all.map((p) => p.v)), Math.max(...all.map((p) => p.v))]
-    // A near-flat series would otherwise stretch noise across the whole
-    // height and repeat one tick label.
     const minSpan = Math.max(Math.abs(v0), Math.abs(v1)) * 0.02 || 2
     if (v1 - v0 < minSpan) {
       const mid = (v0 + v1) / 2
@@ -58,8 +56,6 @@ export function LineChart({ series, height = 240, formatValue, yDomain }: Props)
     return { t0, t1, x, y, ticks, w }
   }, [shown, width, height, yDomain])
 
-  // Same wrapper as the chart, so the size observer attached on mount keeps
-  // working when data arrives later or a parent swaps the series.
   if (!scale)
     return (
       <div className="chart" ref={wrap}>

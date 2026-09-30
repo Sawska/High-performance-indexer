@@ -57,7 +57,6 @@ impl Client {
         let status = res.status();
         if let Some(set) = res.headers().get(header::SET_COOKIE) {
             let pair = set.to_str().unwrap().split(';').next().unwrap().to_string();
-            // Removal answers with an empty value.
             self.cookie = (!pair.ends_with('=')).then_some(pair);
         }
         let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
@@ -75,7 +74,6 @@ impl Client {
             .await
     }
 
-    /// GET that must succeed.
     async fn get(&mut self, path: &str) -> Value {
         let (status, body) = self.request("GET", path, None).await;
         assert_eq!(status, StatusCode::OK, "GET {path}: {body}");

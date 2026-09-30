@@ -7,7 +7,6 @@ import { useNow } from '../useNow'
 
 const LIMIT = 100
 
-// What data-api /activity reports; TRADE rows repeat what Trades shows.
 const TYPES = ['TRADE', 'SPLIT', 'MERGE', 'REDEEM', 'CONVERSION', 'REWARD', 'YIELD', 'MAKER_REBATE', 'TAKER_REBATE']
 
 export function Activity() {

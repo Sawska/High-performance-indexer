@@ -18,7 +18,6 @@ export function Trader() {
 
   if (!data) return <Loading error={error} loading={loading} />
   const t = data.trader
-  // Redeemable means resolved; the losing side redeems for nothing.
   const resolved = data.positions.filter((p) => p.redeemable)
   const toRedeem = resolved.reduce((s, p) => s + p.current_value, 0)
   const types = [...new Set(data.activity.map((a) => a.activity_type))].sort()

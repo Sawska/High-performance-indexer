@@ -123,7 +123,6 @@ const TRADE_SELECT: &str = "SELECT t.ts, t.proxy_wallet, p.name, p.pseudonym, t.
     FROM data_trades t
     LEFT JOIN profiles p USING (proxy_wallet)";
 
-// ---------------------------------------------------------------- overview
 
 #[derive(Serialize, sqlx::FromRow)]
 struct Totals {
@@ -284,7 +283,6 @@ struct QuoteRow {
     captured_at: DateTime<Utc>,
 }
 
-/// Header of a token's newest /books snapshot.
 #[derive(Serialize, sqlx::FromRow)]
 struct BookMeta {
     asset_id: String,
@@ -696,7 +694,6 @@ pub async fn trader(
     .fetch_all(&pool)
     .await?;
 
-    // Positions are snapshots; the newest capture is the current book.
     let positions = sqlx::query_as::<_, PositionRow>(
         "SELECT ps.asset, ps.condition_id, coalesce(m.found, false) AS has_market,
                 -- Positions carry no title; fall back to one a trade or

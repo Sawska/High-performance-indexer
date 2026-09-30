@@ -189,3 +189,97 @@ export type TraderDetail = {
   }[]
   activity: Activity[]
 }
+
+// ── on-chain (Polygon) ──────────────────────────────────────────────────────
+
+export type ChainStatus = {
+  /** Whether *this* server process is running the indexer. */
+  enabled: boolean
+  head: number | null
+  cursor: number | null
+  lag: number | null
+  last_range: [number, number] | null
+  ranges_done: number
+  rows_written: number
+  reorgs: number
+  errors: number
+  last_error: string | null
+  updated_at: string | null
+  /** Cursor as stored in the database, present even when this process is not indexing. */
+  stored_cursor: number | null
+  stored_cursor_at: string | null
+  tables: { name: string; rows: number }[]
+}
+
+/** Fields every on-chain row carries: where the log sat on the chain. */
+type LogRef = {
+  transaction_hash: string
+  log_index: number
+  block_number: number
+  block_time: string | null
+}
+
+export type ChainFill = LogRef & {
+  exchange: string
+  exchange_version: number
+  neg_risk: boolean
+  event: 'order_filled' | 'orders_matched'
+  order_hash: string
+  maker: string | null
+  taker: string | null
+  side: 'BUY' | 'SELL' | null
+  token_id: string | null
+  price: number | null
+  size: number | null
+  fee: number | null
+  condition_id: string | null
+  question: string | null
+  slug: string | null
+}
+
+export type ChainPosition = LogRef & {
+  kind: 'split' | 'merge'
+  stakeholder: string
+  condition_id: string
+  collateral_token: string | null
+  partition_ids: string[]
+  amount: number | null
+  question: string | null
+}
+
+export type ChainRedemption = LogRef & {
+  redeemer: string
+  condition_id: string
+  index_sets: string[]
+  payout: number | null
+  question: string | null
+}
+
+export type ChainCondition = {
+  condition_id: string
+  oracle: string | null
+  question_id: string | null
+  outcome_slot_count: number | null
+  prepared_at: string | null
+  resolved_at: string | null
+  payout_numerators: string[] | null
+  question: string | null
+  slug: string | null
+}
+
+export type ChainTokenTransfer = LogRef & {
+  item_index: number
+  operator: string | null
+  from_address: string
+  to_address: string
+  token_id: string
+  amount: number | null
+}
+
+export type ChainCollateralTransfer = LogRef & {
+  token: string
+  symbol: string | null
+  from_address: string
+  to_address: string
+  amount: number | null
+}

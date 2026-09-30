@@ -39,7 +39,6 @@ describe('Overview page', () => {
     mockApi({ '/api/overview': data })
     renderRoute('/', '/', <Overview />)
     await screen.findByRole('heading', { name: 'Overview' })
-    // Market, Leading outcome, 24h, Volume, Liquidity
     const top = tableWithHeader('Leading outcome')
     expect(bodyRows(top)).toEqual([['Will it rain in London tomorrow?', 'No 62¢', '−3¢', '$2.3M', '$45.6K']])
     expect(within(top).getByRole('link', { name: 'Will it rain in London tomorrow?' })).toHaveAttribute('href', '/markets/512345')

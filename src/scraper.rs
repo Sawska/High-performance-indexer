@@ -526,7 +526,6 @@ async fn scrape_holders(
 
     for holder in found.iter().flatten() {
         wallets.insert(holder.proxy_wallet.clone());
-        // A holder carries the fuller profile, so it overwrites a trade's.
         profiles.insert(holder.proxy_wallet.clone(), profile_from_holder(holder));
     }
 }
@@ -655,7 +654,6 @@ mod unit {
 
     #[test]
     fn env_overrides_config_and_bad_values_fall_back() {
-        // Keys no other test reads, so setting them cannot race.
         unsafe {
             std::env::set_var("SCRAPE_TEST_ONLY_NUM", "42");
             std::env::set_var("SCRAPE_TEST_ONLY_BAD", "forty-two");
